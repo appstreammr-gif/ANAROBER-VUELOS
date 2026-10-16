@@ -8,7 +8,7 @@ app.use(express.static(__dirname));
 
 // Cuando entren al inicio, mostrar el menú
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'menu_anarober.html'));
+  res.sendFile(path.join(_res.sendFile(__dirname + '/iniciar todo.js');
 });
 
 app.listen(PORT, () => {
