@@ -8,7 +8,7 @@ app.use(express.static(__dirname));
 
 // Página de inicio
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'ENTRADA.HTML'));
+  res.sendFile(path.join(res.sendFile(path.join(__dirname, 'entrada.html'));
 });
 
 app.listen(PORT, () => {
