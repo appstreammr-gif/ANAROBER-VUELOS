@@ -3,14 +3,14 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Servir archivos estáticos de la carpeta principal
+// Servir todos los archivos
 app.use(express.static(__dirname));
 
-// Cuando entren al inicio, mostrar el menú
+// Página de inicio
 app.get('/', (req, res) => {
-  res.sendFile(path.join(_res.sendFile(__dirname + '/iniciar todo.js');
+  res.sendFile(path.join(__dirname, 'ENTRADA.HTML'));
 });
 
 app.listen(PORT, () => {
-  console.log('✅ SERVIDOR CORREGIDO — ESCUCHANDO EN PUERTO:', PORT);
+  console.log('✅ SERVIDOR FUNCIONANDO');
 });
