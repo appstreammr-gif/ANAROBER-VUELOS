@@ -1,16 +1,12 @@
 {
+  "name": "anarober-vuelos",
+  "version": "1.0.0",
+  "description": "Sistema ANAROBER",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "axios": "^1.20.0",
-    "express": "^5.2.1",
-    "socket.io": "^4.8.3",
-    "soket.io": "^0.0.1-security"
-  },
-  "cordova": {
-    "platforms": [
-      "android"
-    ]
-  },
-  "devDependencies": {
-    "cordova-android": "^15.1.0"
+    "express": "^4.18.2"
   }
 }
