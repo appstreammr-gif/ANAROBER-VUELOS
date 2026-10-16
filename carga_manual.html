@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="ngrok-skip-browser-warning" content="true">
+<title>ANAROBER — CONSOLA DE CARGA</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { 
+  height: 100%; 
+  background: linear-gradient(135deg, #e6f2f2 0%, #d1e7e7 100%); 
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif; 
+  font-size: 15px; 
+  line-height: 1.6; 
+  overflow: hidden;
+}
+.contenedor-principal { 
+  display: flex; 
+  height: 100vh; 
+  width: 100%;
+}
+.barra-lateral { 
+  width: 220px; 
+  background: linear-gradient(180deg, #008080 0%, #006666 100%); 
+  color: white; 
+  display: flex; 
+  flex-direction: column; 
+  padding: 20px 0; 
+  box-shadow: 3px 0 10px rgba(0,0,0,0.15);
+}
+.logo-seccion { 
+  text-align: center; 
+  padding: 15px; 
+  border-bottom: 1px solid rgba(255,255,255,0.2); 
+  margin-bottom: 15px;
+}
+.logo-texto { 
+  font-size: 22px; 
+  font-weight: bold; 
+  letter-spacing: 2px;
+}
+.logo-subtitulo { 
+  font-size: 11px; 
+  opacity: 0.85; 
+  margin-top: 4px; 
+  letter-spacing: 1px;
+}
+.menu-item { 
+  padding: 14px 25px; 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+  border-left: 4px solid transparent;
+}
+.menu-item:hover, .menu-item.activo { 
+  background: rgba(255,255,255,0.15); 
+  border-left-color: #ffcc00;
+}
+.menu-item i { font-size: 20px;}
+.area-contenido { 
+  flex: 1; 
+  padding: 25px 35px; 
+  overflow-y: auto; 
+  background: #f0f8f8;
+}
+.encabezado-pagina { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 30px; 
+  padding-bottom: 15px; 
+  border-bottom: 2px solid #008080;
+}
+.titulo-pagina { 
+  font-size: 26px; 
+  color: #006666; 
+  font-weight: 600;
+}
+.estado-conexion { 
+  padding: 8px 16px; 
+  border-radius: 20px; 
+  font-weight: 500; 
+  font-size: 14px;
+}
+.conectado { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+.desconectado { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+.tarjeta { 
+  background: white; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 15px rgba(0,128,128,0.1); 
+  padding: 30px; 
+  margin-bottom: 25px;
+}
+.tarjeta-titulo { 
+  font-size: 20px; 
+  color: #008080; 
+  margin-bottom: 20px; 
+  padding-bottom: 10px; 
+  border-bottom: 2px solid #e0e0e0;
+}
+.boton { 
+  padding: 12px 28px; 
+  border: none; 
+  border-radius: 8px; 
+  font-size: 15px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+  margin: 5px 8px 5px 0;
+}
+.boton-principal { 
+  background: linear-gradient(135deg, #00b3b3 0%, #008080 100%); 
+  color: white;
+}
+.boton-principal:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 5px 15px rgba(0,128,128,0.3);
+}
+.boton-voz { 
+  background: linear-gradient(135deg, #00cccc 0%, #009999 100%); 
+  color: white;
+}
+.boton-voz:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 5px 15px rgba(0,204,204,0.3);
+}
+.boton-voz-activo { 
+  background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%); 
+  animation: pulsar 1s infinite;
+}
+@keyframes pulsar { 
+  0% { box-shadow: 0 0 0 0 rgba(255,51,0,0.4); } 
+  70% { box-shadow: 0 0 0 15px rgba(255,51,0,0); } 
+  100% { box-shadow: 0 0 0 0 rgba(255,51,0,0); } 
+}
+.boton-peligro { 
+  background: linear-gradient(135deg, #ff6666 0%, #cc0000 100%); 
+  color: white;
+}
+.boton-peligro:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 5px 15px rgba(204,0,0,0.3);
+}
+.caja-radio {
+  background: linear-gradient(135deg, #0f1a2a 0%, #1a2c47 100%);
+  border-radius: 15px;
+  padding: 30px;
+  color: white;
+}
+.pantalla-radio {
+  background: #001a1a;
+  border: 2px solid #00ff9960;
+  border-radius: 10px;
+  padding: 20px;
+  min-height: 180px;
+  margin-bottom: 25px;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #00ff99;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.destino-select {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 25px;
+  background: #001a1a;
+  color: #00ff99;
+  border: 2px solid #00ff9960;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.boton-transmitir {
+  width: 260px;
+  height: 120px;
+  margin: 0 auto;
+  display: block;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(180deg, #00cc66 0%, #008844 100%);
+  box-shadow: 0 6px 0 #005522, 0 10px 20px rgba(0,204,102,0.35);
+  transition: all 0.1s;
+  user-select: none;
+}
+.boton-transmitir:active, .boton-transmitir.activo {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 #005522, inset 0 4px 10px rgba(0,0,0,0.4);
+  background: linear-gradient(180deg, #ff3300 0%, #cc2200 100%);
+}
+.boton-transmitir.grabando {
+  animation: pulso-grabando 0.5s infinite alternate;
+}
+@keyframes pulso-grabando {
+  from { box-shadow: 0 0 15px #ff3300; }
+  to { box-shadow: 0 0 35px #ff3300; }
+}
+.indicador-radio {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 16px;
+  color: #88a;
+}
+.en-vivo {
+  color: #ffcc00;
+  animation: parpadeo 1s infinite;
+}
+@keyframes parpadeo {
+  50% { opacity: 0.3; }
+}
+.mensaje-entrante-radio {
+  color: #99ffcc;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #00ff9930;
+}
+.mensaje-saliente-radio {
+  color: #66ccff;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #0099ff30;
+}
+.fila-form { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 20px; 
+  margin-bottom: 18px;
+}
+.grupo-campo { flex: 1; min-width: 200px; }
+.grupo-campo label { 
+  display: block; 
+  font-weight: 600; 
+  color: #006666; 
+  margin-bottom: 6px; 
+  font-size: 14px;
+}
+.grupo-campo input, .grupo-campo textarea { 
+  width: 100%; 
+  padding: 12px 15px; 
+  border: 2px solid #b3d9d9; 
+  border-radius: 8px; 
+  font-size: 15px; 
+  transition: all 0.3s ease; 
+  background: #f9fcfc;
+}
+.grupo-campo input:focus, .grupo-campo textarea:focus { 
+  outline: none; 
+  border-color: #008080; 
+  box-shadow: 0 0 0 3px rgba(0,128,128,0.15); 
+  background: white;
+}
+.lista-vuelos { 
+  background: #f0f8f8; 
+  border-radius: 10px; 
+  padding: 20px; 
+  margin: 20px 0; 
+  display: none;
+}
+.vuelo-item { 
+  background: white; 
+  padding: 15px 20px; 
+  border-radius: 8px; 
+  margin-bottom: 10px; 
+  border-left: 4px solid #00b3b3; 
+  transition: all 0.3s ease;
+}
+.vuelo-item:hover { 
+  transform: translateX(5px); 
+  box-shadow: 0 3px 10px rgba(0,128,128,0.15);
+}
+.mensaje { 
+  padding: 15px 20px; 
+  border-radius: 8px; 
+  margin: 15px 0; 
+  display: none; 
+  font-weight: 500;
+}
+.ok { background: #d4edda; color: #155724; border-left: 4px solid #28a745; display: block !important; }
+.error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; display: block !important; }
+.aviso { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; display: block !important; }
+.contador { 
+  font-weight: bold; 
+  color: #cc0000; 
+  margin-left: 10px; 
+  font-size: 18px;
+}
+@media (max-width: 768px) { 
+  .barra-lateral { width: 70px; } 
+  .logo-texto { display: none; } 
+  .logo-subtitulo { display: none; } 
+  .menu-item span:nth-child(2) { display: none; } 
+  .fila-form { flex-direction: column; } 
+}
+</style>
+</head>
+<body>
+<div class="contenedor-principal">
+  <div class="barra-lateral">
+    <div class="logo-seccion">
+      <div class="logo-texto">ANAROBER</div>
+      <div class="logo-subtitulo">Carga y Control de Vuelos</div>
+    </div>
+    <div class="menu-item activo" onclick="seccionActual('carga')">
+      <span>📋</span>
+      <span>Carga de Vuelos</span>
+    </div>
+    <div class="menu-item" onclick="seccionActual('radio')">
+      <span>📻</span>
+      <span>Transmisión</span>
+    </div>
+    <div class="menu-item" onclick="seccionActual('historial')">
+      <span>📊</span>
+      <span>Historial</span>
+    </div>
+    <div class="menu-item" onclick="seccionActual('config')">
+      <span>⚙️</span>
+      <span>Configuración</span>
+    </div>
+    <div class="menu-item" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.2);">
+      <span>🔑</span>
+      <span>Salir</span>
+    </div>
+  </div>
+  <div class="area-contenido">
+    <div class="encabezado-pagina">
+      <h1 class="titulo-pagina" id="tituloSeccion">ANAROBER - AEP - AEROPARQUE</h1>
+      <div id="estadoConexion" class="estado-conexion desconectado">🔄 Conectando...</div>
+    </div>
+    <div id="seccion-carga">
+      <div class="tarjeta">
+        <h2 class="tarjeta-titulo">🎙️ Carga por Voz o Manual</h2>
+        <button id="botonVoz" class="boton boton-voz" onclick="iniciarPorVoz()">🔊 INICIAR CARGA POR VOZ</button>
+        <div id="mensajeVoz" class="mensaje aviso"></div>
+        <div id="listaPendientes" class="lista-vuelos">
+          <h3 style="margin-bottom: 15px; color: #006666;">📋 Vuelos Cargados (<span id="cantidadPendientes">0</span>)</h3>
+          <div id="contenedorPendientes"></div>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h2 class="tarjeta-titulo">✏️ Datos del Vuelo</h2>
+        <div class="fila-form">
+          <div class="grupo-campo">
+            <label>N° SALIDA</label>
+            <input type="text" id="vueloSalida" placeholder="ej: 100720">
+          </div>
+          <div class="grupo-campo">
+            <label>N° ARRIBO</label>
+            <input type="text" id="vueloArribo" placeholder="ej: 100721">
+          </div>
+        </div>
+        <div class="fila-form">
+          <div class="grupo-campo">
+            <label>MATRÍCULA</label>
+            <input type="text" id="matricula" placeholder="ej: LV-ABC">
+          </div>
+          <div class="grupo-campo">
+            <label>POSICIÓN</label>
+            <input type="text" id="posicion" placeholder="ej: 12">
+          </div>
+        </div>
+        <div class="fila-form">
+          <div class="grupo-campo">
+            <label>HORA SALIDA</label>
+            <input type="text" id="horaSalida" placeholder="ej: 14:55">
+          </div>
+          <div class="grupo-campo">
+            <label>HORA ARRIBO / STA</label>
+            <input type="text" id="horaArribo" placeholder="ej: 15:30">
+          </div>
+        </div>
+        <div class="fila-form">
+          <div class="grupo-campo" style="flex: 2;">
+            <label>IMP / OBSERVACIONES</label>
+            <textarea id="imp" rows="3" placeholder="Observaciones si hay..."></textarea>
+          </div>
+        </div>
+        <div style="margin-top: 20px;">
+          <button class="boton boton-principal" onclick="guardarVueloManual()">💾 GUARDAR VUELO</button>
+          <button class="boton" style="background:#e0e0e0; color:#333;" onclick="limpiarFormularioSolo()">🗑️ LIMPIAR FORMULARIO</button>
+        </div>
+        <button class="boton boton-peligro" style="width:100%; margin-top:25px;" onclick="limpiarTodoSistema()">⚠️ LIMPIAR TODO — Borra vuelos, asignaciones y registros</button>
+        <div id="mensaje" class="mensaje"></div>
+      </div>
+    </div>
+    <div id="seccion-radio" style="display:none;">
+      <div class="tarjeta caja-radio">
+        <h2 class="tarjeta-titulo" style="color:#00ff99; border-bottom-color:#00ff9940;">📻 TRANSMISIÓN — SISTEMA NEXTEL</h2>
+        
+        <select class="destino-select" id="destinoRadio">
+          <option value="todos">🔊 Todos los Encargados</option>
+          <option value="01">👤 Encargado 01 — PÉREZ</option>
+          <option value="02">👤 Encargado 02 — SÁNCHEZ</option>
+          <option value="03">👤 Encargado 03 — VERA</option>
+          <option value="04">👤 Encargado 04 — MARÍA</option>
+          <option value="05">👤 Encargado 05 — TOTA</option>
+        </select>
+        <div class="pantalla-radio" id="pantallaRadio">
+✅ Sistema listo<br>
+⬇️ Elegí a quién hablarle<br>
+🎙️ Mantené apretado el botón para hablar<br>
+📤 Soltá para enviar
+        </div>
+        <button 
+          class="boton-transmitir" 
+          id="botonPTT"
+          onmousedown="empezarTransmision()"
+          onmouseup="terminarTransmision()"
+          onmouseleave="terminarTransmision()"
+          ontouchstart="empezarTransmision()"
+          ontouchend="terminarTransmision()"
+        >
+🎤 MANTENER<br>APRETADO
+        </button>
+        <div class="indicador-radio" id="indicadorEstado">
+⏳ Esperando transmisión...
+        </div>
+      </div>
+    </div>
+    <div id="seccion-historial" style="display:none;">
+      <div class="tarjeta">
+        <h2 class="tarjeta-titulo">📊 Historial de Operaciones</h2>
+        <p style="color:#666;">Registro de vuelos cargados y asignaciones realizadas</p>
+      </div>
+    </div>
+    <div id="seccion-config" style="display:none;">
+      <div class="tarjeta">
+        <h2 class="tarjeta-titulo">⚙️ Configuración del Sistema</h2>
+        <p style="color:#666;">Conexión, encargados y parámetros de ANAROBER</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+let DIRECCION_SERVIDOR = "";
+let socket = null;
+let vuelosPendientes = [];
+let reconocimiento = null;
+let reconocimientoRadio = null;
+let transmitiendo = false;
+let textoAcumulado = "";
+let pasoActual = 0;
+let temporizador = null;
+let tiempoRestante = 7;
+let contadorInterval = null;
+let esperandoEncargado = false;
+const TIEMPO_POR_PASO = 7000;
+const ENCARGADOS = [
+  { apellido: 'PÉREZ', codigo: '01' },
+  { apellido: 'SÁNCHEZ', codigo: '02' },
+  { apellido: 'VERA', codigo: '03' },
+  { apellido: 'MARÍA', codigo: '04' },
+  { apellido: 'TOTA', codigo: '05' }
+];
+const ALFABETO_AERONAUTICO = {
+  "ALFA": "A", "BRAVO": "B", "CHARLIE": "C", "DELTA": "D", "ECHO": "E",
+  "FOXTROT": "F", "GOLF": "G", "HOTEL": "H", "INDIA": "I", "JULIET": "J",
+  "KILO": "K", "LIMA": "L", "MIKE": "M", "NOVEMBER": "N", "OSCAR": "O",
+  "PAPA": "P", "QUEBEC": "Q", "ROMEO": "R", "SIERRA": "S", "TÁNGO": "T",
+  "TANGO": "T", "UNIFORM": "U", "VICTOR": "V", "WHISKEY": "W", "X-RAY": "X",
+  "XRAY": "X", "YANKEE": "Y", "ZULU": "Z"
+};
+function seccionActual(nombre) {
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('activo'));
+  event.currentTarget.classList.add('activo');
+  document.querySelectorAll('[id^="seccion-"]').forEach(s => s.style.display = 'none');
+  document.getElementById('seccion-' + nombre).style.display = 'block';
+  const titulos = {
+    carga: 'ANAROBER - AEP - AEROPARQUE',
+    radio: '📻 Transmisión — Sistema Nextel',
+    historial: 'Historial de Operaciones',
+    config: 'Configuración del Sistema'
+  };
+  document.getElementById('tituloSeccion').textContent = titulos[nombre] || 'ANAROBER';
+}
+function obtenerFechaArgentina() {
+  const ahora = new Date();
+  const fechaArgentina = new Date(ahora.getTime() - 3 * 60 * 60 * 1000);
+  const anio = fechaArgentina.getUTCFullYear();
+  const mes = String(fechaArgentina.getUTCMonth() + 1).padStart(2, '0');
+  const dia = String(fechaArgentina.getUTCDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+function traducirMatricula(texto) {
+  if (!texto) return "";
+  const limpio = texto.toUpperCase().trim();
+  const palabras = limpio.split(/[\s-]+/);
+  let letras = "";
+  for (let palabra of palabras) {
+    palabra = palabra.replace(/Á/g,"A").replace(/É/g,"E").replace(/Í/g,"I").replace(/Ó/g,"O").replace(/Ú/g,"U");
+    if (ALFABETO_AERONAUTICO[palabra]) letras += ALFABETO_AERONAUTICO[palabra];
+    else if (palabra.length === 1 && /[A-Z]/.test(palabra)) letras += palabra;
+  }
+  return letras || limpio;
+}
+function formatearHora(texto) {
+  let soloNumeros = texto.replace(/[^0-9]/g, '');
+  if (soloNumeros.length === 4) return soloNumeros.substring(0,2)+':'+soloNumeros.substring(2,4);
+  if (soloNumeros.length === 3) return '0'+soloNumeros.substring(0,1)+':'+soloNumeros.substring(1,3);
+  if (texto.includes(':')) return texto;
+  return texto;
+}
+function buscarEncargado(texto) {
+  texto = texto.toUpperCase().trim();
+  for (let e of ENCARGADOS) if (texto.includes(e.apellido)) return e.codigo;
+  if (texto.includes('1')) return '01';
+  if (texto.includes('2')) return '02';
+  if (texto.includes('3')) return '03';
+  if (texto.includes('4')) return '04';
+  if (texto.includes('5')) return '05';
+  return '';
+}
+function actualizarListaPendientes() {
+  const caja = document.getElementById('listaPendientes');
+  const contador = document.getElementById('cantidadPendientes');
+  const lista = document.getElementById('contenedorPendientes');
+  if (vuelosPendientes.length === 0) { caja.style.display = 'none'; return; }
+  caja.style.display = 'block';
+  contador.textContent = vuelosPendientes.length;
+  lista.innerHTML = vuelosPendientes.map((v, i) => {
+    let lineas = [];
+    if (v.vueloSalida) lineas.push(`✈️ SALIDA: ${v.vueloSalida} — Hora: ${v.horaSalida || '—'}`);
+    if (v.vueloArribo) lineas.push(`🛬 ARRIBO: ${v.vueloArribo} — Hora: ${v.horaArribo || '—'}`);
+    lineas.push(`Matrícula: ${v.matricula} | Posición: ${v.posicion || '—'}`);
+    return `<div class="vuelo-item">${i+1}. ${lineas.join(' | ')}</div>`;
+  }).join('');
+}
+function limpiarFormularioSolo() {
+  document.getElementById('vueloSalida').value = '';
+  document.getElementById('vueloArribo').value = '';
+  document.getElementById('matricula').value = '';
+  document.getElementById('posicion').value = '';
+  document.getElementById('horaSalida').value = '';
+  document.getElementById('horaArribo').value = '';
+  document.getElementById('imp').value = '';
+}
+function guardarVueloManual() {
+  const vueloSalida = document.getElementById('vueloSalida').value.trim();
+  const vueloArribo = document.getElementById('vueloArribo').value.trim();
+  const matricula = document.getElementById('matricula').value.trim().toUpperCase();
+  const posicion = document.getElementById('posicion').value.trim().toUpperCase();
+  const horaSalida = document.getElementById('horaSalida').value.trim();
+  const horaArribo = document.getElementById('horaArribo').value.trim();
+  const imp = document.getElementById('imp').value.trim();
+  const mensaje = document.getElementById('mensaje');
+  if (!vueloSalida && !vueloArribo) {
+    mensaje.className = 'mensaje error';
+    mensaje.textContent = '❌ Completá N° SALIDA o N° ARRIBO (al menos uno)';
+    return;
+  }
+  if (!matricula) {
+    mensaje.className = 'mensaje error';
+    mensaje.textContent = '❌ MATRÍCULA es obligatoria';
+    return;
+  }
+  vuelosPendientes.push({ vueloSalida, vueloArribo, matricula, posicion, horaSalida, horaArribo, imp });
+  mensaje.className = 'mensaje ok';
+  mensaje.textContent = '✅ CARGADO — Cargá otro o decí: ASIGNAR';
+  actualizarListaPendientes();
+  limpiarFormularioSolo();
+}
+function asignarYEnviarTodo(codigoEncargado) {
+  document.getElementById('botonVoz').classList.remove('boton-voz-activo');
+  const vuelosParaTablaGeneral = [];
+  const vuelosParaEncargado = [];
+  for (const v of vuelosPendientes) {
+    if (v.vueloSalida) {
+      const salida = {
+        nroVuelo: v.vueloSalida, vuelo: v.vueloSalida, matricula: v.matricula, posicion: v.posicion,
+        STD: v.horaSalida || '—', horaSalida: v.horaSalida || '—', esArribo: false,
+        IMP: v.imp || '', encargadoAsignado: codigoEncargado, fecha: obtenerFechaArgentina()
+      };
+      vuelosParaTablaGeneral.push(salida);
+      vuelosParaEncargado.push(salida);
+    }
+    if (v.vueloArribo) {
+      const arribo = {
+        nroVuelo: v.vueloArribo, vuelo: v.vueloArribo, matricula: v.matricula, posicion: v.posicion,
+        STA: v.horaArribo || '—', ETA: v.horaArribo || '—', esArribo: true,
+        IMP: v.imp || '', encargadoAsignado: codigoEncargado, fecha: obtenerFechaArgentina()
+      };
+      vuelosParaTablaGeneral.push(arribo);
+    }
+  }
+  if (socket && socket.connected) {
+    socket.emit('vuelos-nuevos-asignados', { vuelos: vuelosParaTablaGeneral, encargado: codigoEncargado });
+    socket.emit('asignacionVuelos', { vuelos: vuelosParaEncargado, destino: codigoEncargado });
+  }
+  const nomEnc = ENCARGADOS.find(e => e.codigo === codigoEncargado);
+  const nombreEnc = nomEnc ? nomEnc.apellido : codigoEncargado;
+  document.getElementById('mensajeVoz').className = 'mensaje ok';
+  document.getElementById('mensajeVoz').innerHTML = `✅ ${vuelosParaTablaGeneral.length} enviados — ${vuelosParaEncargado.length} al Encargado ${nombreEnc}`;
+  vuelosPendientes = [];
+  actualizarListaPendientes();
+}
+function limpiarTodoSistema() {
+  if (!confirm('⚠️ ESTÁS SEGURO?\n\nSe borrarán TODOS los vuelos, el JSON, el mapa y las pantallas de encargados.\nNo se puede deshacer.')) return;
+  vuelosPendientes = [];
+  esperandoEncargado = false;
+  actualizarListaPendientes();
+  limpiarFormularioSolo();
+  document.getElementById('mensajeVoz').textContent = '';
+  document.getElementById('mensaje').textContent = '';
+  document.getElementById('botonVoz').classList.remove('boton-voz-activo');
+  if (socket && socket.connected) {
+    socket.emit('limpiarDespuesInforme');
+  }
+  document.getElementById('mensaje').className = 'mensaje ok';
+  document.getElementById('mensaje').textContent = '🧹 LIMPIEZA TOTAL COMPLETA — Refrescá las pantallas (F5)';
+}
+function agregarEnPantallaRadio(texto, esEntrada = false) {
+  const caja = document.getElementById('pantallaRadio');
+  const avisoVacio = caja.querySelector('.sin-mensajes');
+  if (avisoVacio) avisoVacio.remove();
+  
+  const div = document.createElement('div');
+  div.className = esEntrada ? 'mensaje-entrante-radio' : 'mensaje-saliente-radio';
+  div.innerHTML = texto;
+  caja.appendChild(div);
+  caja.scrollTop = caja.scrollHeight;
+}
+function actualizarTextoParcial(texto) {
+  const caja = document.getElementById('pantallaRadio');
+  let lineas = caja.querySelectorAll('div');
+  let ultima = lineas[lineas.length - 1];
+  if (ultima && ultima.textContent.includes('ESTÁS HABLANDO')) {
+    ultima.remove();
+  }
+  const div = document.createElement('div');
+  div.style.color = '#ffcc00';
+  div.textContent = '🎙️ ESTÁS HABLANDO: ' + texto;
+  caja.appendChild(div);
+  caja.scrollTop = caja.scrollHeight;
+}
+// ✅ CREAR ARCHIVO JSON PARA ENCARGADOS
+async function crearMensajeJSON(destino, texto) {
+  const ahora = new Date();
+  const id = ahora.toISOString().replace(/[-T:.]/g, '').substring(0, 14);
+  
+  let destinoFinal = destino === 'todos' ? 'TODOS' : `ENCARGADO ${destino}`;
+  
+  const datos = {
+    id: id,
+    fechaHora: ahora.toLocaleString('es-AR'),
+    remitente: 'ANAROBER',
+    destino: destinoFinal,
+    texto: texto
+  };
+  
+  if (socket && socket.connected) {
+    socket.emit('guardar-mensaje-json', datos);
+  }
+  
+  console.log('📤 JSON generado:', datos);
+  return datos;
+}
+function empezarTransmision() {
+  if (!socket || !socket.connected) {
+    alert('❌ Sin conexión con el servidor');
+    return;
+  }
+  if (!reconocimientoRadio) {
+    alert('⚠️ Usá Google Chrome para la transmisión por voz');
+    return;
+  }
+  
+  transmitiendo = true;
+  textoAcumulado = "";
+  document.getElementById('botonPTT').classList.add('activo', 'grabando');
+  document.getElementById('indicadorEstado').innerHTML = '<span class="en-vivo">🔴 TRANSMITIENDO... Soltá para enviar</span>';
+  
+  try { reconocimientoRadio.start(); } catch(e) {}
+}
+async function terminarTransmision() {
+  if (!transmitiendo) return;
+  transmitiendo = false;
+  
+  document.getElementById('botonPTT').classList.remove('activo', 'grabando');
+  document.getElementById('indicadorEstado').textContent = '✅ Mensaje enviado';
+  
+  if (reconocimientoRadio) try { reconocimientoRadio.stop(); } catch(e) {}
+  
+  const destino = document.getElementById('destinoRadio').value;
+  const mensajeFinal = textoAcumulado.trim();
+  
+  if (mensajeFinal && socket && socket.connected) {
+    const datosJSON = await crearMensajeJSON(destino, mensajeFinal);
+    
+    socket.emit('mensaje-voz', {
+      texto: mensajeFinal,
+      destino: destino,
+      remitente: 'ANAROBER'
+    });
+    
+    agregarEnPantallaRadio(`📤 ENVIADO a ${datosJSON.destino}: ${mensajeFinal}`);
+  }
+  
+  setTimeout(() => {
+    document.getElementById('indicadorEstado').textContent = '⏳ Esperando transmisión...';
+  }, 3000);
+}
+function hablar(texto) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const mensaje = new SpeechSynthesisUtterance(texto);
+    mensaje.lang = 'es-AR';
+    mensaje.rate = 1.1;
+    mensaje.volume = 1;
+    window.speechSynthesis.speak(mensaje);
+  }
+}
+function iniciarPorVoz() {
+  if (!reconocimiento) {
+    alert('⚠️ Usá Google Chrome para la función de voz.');
+    return;
+  }
+  if (vuelosPendientes.length > 0) {
+    document.getElementById('mensajeVoz').className = 'mensaje aviso';
+    document.getElementById('mensajeVoz').textContent = '🎤 Decí: ASIGNAR';
+    try { reconocimiento.start(); } catch(e) {}
+    return;
+  }
+  limpiarFormularioSolo();
+  vuelosPendientes = [];
+  esperandoEncargado = false;
+  actualizarListaPendientes();
+  pasoActual = 0;
+  document.getElementById('botonVoz').classList.add('boton-voz-activo');
+  document.getElementById('mensajeVoz').className = 'mensaje aviso';
+  document.getElementById('mensajeVoz').textContent = '🎤 Decí: NÚMERO DE SALIDA...';
+  iniciarPaso();
+}
+function iniciarPaso() {
+  tiempoRestante = 7;
+  const mensajeVoz = document.getElementById('mensajeVoz');
+  const textos = [
+    '🎤 1/6 — N° SALIDA (o "ninguno")...',
+    '🎤 2/6 — N° ARRIBO (o "ninguno")...',
+    '🎤 3/6 — MATRÍCULA...',
+    '🎤 4/6 — POSICIÓN...',
+    '🎤 5/6 — HORA SALIDA...',
+    '🎤 6/6 — HORA ARRIBO...'
+  ];
+  mensajeVoz.innerHTML = `${textos[pasoActual]} <span class="contador">7s</span>`;
+  const campos = ['vueloSalida','vueloArribo','matricula','posicion','horaSalida','horaArribo'];
+  document.getElementById(campos[pasoActual]).focus();
+  clearInterval(contadorInterval);
+  contadorInterval = setInterval(() => {
+    tiempoRestante--;
+    const contador = mensajeVoz.querySelector('.contador');
+    if (contador) contador.textContent = tiempoRestante + 's';
+    if (tiempoRestante <= 0) clearInterval(contadorInterval);
+  }, 1000);
+  if (reconocimiento) try { reconocimiento.start(); } catch(e) {}
+  clearTimeout(temporizador);
+  temporizador = setTimeout(siguientePaso, TIEMPO_POR_PASO);
+}
+function siguientePaso() {
+  clearTimeout(temporizador);
+  clearInterval(contadorInterval);
+  pasoActual++;
+  if (pasoActual < 6) {
+    iniciarPaso();
+  } else {
+    guardarVueloEnListaVoz();
+  }
+}
+function guardarVueloEnListaVoz() {
+  const vueloSalida = document.getElementById('vueloSalida').value.trim();
+  const vueloArribo = document.getElementById('vueloArribo').value.trim();
+  const matricula = document.getElementById('matricula').value.trim().toUpperCase();
+  if (!vueloSalida && !vueloArribo || !matricula) {
+    document.getElementById('mensajeVoz').className = 'mensaje error';
+    document.getElementById('mensajeVoz').textContent = '❌ Faltan datos — Reiniciando...';
+    setTimeout(() => { pasoActual = 0; iniciarPaso(); }, 2000);
+    return;
+  }
+  vuelosPendientes.push({
+    vueloSalida, vueloArribo, matricula,
+    posicion: document.getElementById('posicion').value.trim().toUpperCase(),
+    horaSalida: document.getElementById('horaSalida').value.trim(),
+    horaArribo: document.getElementById('horaArribo').value.trim(),
+    imp: ''
+  });
+  document.getElementById('mensajeVoz').className = 'mensaje ok';
+  document.getElementById('mensajeVoz').textContent = '✅ CARGADO — Decí: ASIGNAR';
+  actualizarListaPendientes();
+  setTimeout(() => { limpiarFormularioSolo(); pasoActual = 0; }, 1800);
+}
+function procesarEntradaVoz(texto) {
+  texto = texto.trim().toUpperCase();
+  console.log('📝 ESCUCHADO →', texto);
+  if (texto === 'ASIGNAR' || texto.startsWith('ASIGNAR')) {
+    clearTimeout(temporizador);
+    clearInterval(contadorInterval);
+    esperandoEncargado = true;
+    document.getElementById('mensajeVoz').className = 'mensaje aviso';
+    document.getElementById('mensajeVoz').textContent = '🎤 Decí el apellido del encargado: PÉREZ / SÁNCHEZ / VERA / MARÍA / TOTA';
+    return;
+  }
+  if (texto === 'CANCELAR' && esperandoEncargado) {
+    esperandoEncargado = false;
+    document.getElementById('mensajeVoz').className = 'mensaje aviso';
+    document.getElementById('mensajeVoz').textContent = '❌ CANCELADO';
+    return;
+  }
+  if (esperandoEncargado) {
+    const cod = buscarEncargado(texto);
+    if (cod) {
+      esperandoEncargado = false;
+      asignarYEnviarTodo(cod);
+    } else {
+      document.getElementById('mensajeVoz').className = 'mensaje error';
+      document.getElementById('mensajeVoz').textContent = '❌ No reconocido — Intentá de nuevo';
+    }
+    return;
+  }
+  if (texto === 'NINGUNO' || texto === 'NINGUNA') {
+    siguientePaso();
+    return;
+  }
+  switch(pasoActual) {
+    case 0: document.getElementById('vueloSalida').value = texto.replace(/[^0-9A-Za-z]/g, ''); break;
+    case 1: document.getElementById('vueloArribo').value = texto.replace(/[^0-9A-Za-z]/g, ''); break;
+    case 2: document.getElementById('matricula').value = traducirMatricula(texto); break;
+    case 3: document.getElementById('posicion').value = texto.replace(/[^0-9A-Za-z]/g, '').toUpperCase(); break;
+    case 4: document.getElementById('horaSalida').value = formatearHora(texto); break;
+    case 5: document.getElementById('horaArribo').value = formatearHora(texto); break;
+  }
+  setTimeout(() => {
+    const val = [
+      document.getElementById('vueloSalida').value,
+      document.getElementById('vueloArribo').value,
+      document.getElementById('matricula').value,
+      document.getElementById('posicion').value,
+      document.getElementById('horaSalida').value,
+      document.getElementById('horaArribo').value
+    ][pasoActual];
+    if (val) {
+      clearTimeout(temporizador);
+      clearInterval(contadorInterval);
+      siguientePaso();
+    }
+  }, 600);
+}
+async function iniciarConexion() {
+  try {
+    const res = await fetch('./config.js');
+    if (res.ok) {
+      const texto = await res.text();
+      const m = texto.match(/DIRECCION_BASE\s*=\s*"([^"]+)"/);
+      if (m) DIRECCION_SERVIDOR = m[1];
+    }
+  } catch (e) {
+    DIRECCION_SERVIDOR = window.location.origin;
+  }
+  if (!DIRECCION_SERVIDOR) DIRECCION_SERVIDOR = window.location.origin;
+  
+  const script = document.createElement('script');
+  script.src = DIRECCION_SERVIDOR + '/socket.io/socket.io.js';
+  script.onload = conectarSocket;
+  document.head.appendChild(script);
+}
+function conectarSocket() {
+  if (!window.io) {
+    document.getElementById('estadoConexion').textContent = '❌ Biblioteca no cargada';
+    return;
+  }
+  socket = io(DIRECCION_SERVIDOR, { transports: ['websocket', 'polling'], reconnection: true, reconnectionDelay: 1000 });
+  
+  socket.on('connect', () => {
+    document.getElementById('estadoConexion').className = 'estado-conexion conectado';
+    document.getElementById('estadoConexion').textContent = '✅ Conectado — Sistema activo';
+    agregarEnPantallaRadio('✅ Conectado al servidor');
+  });
+  
+  socket.on('disconnect', () => {
+    document.getElementById('estadoConexion').className = 'estado-conexion desconectado';
+    document.getElementById('estadoConexion').textContent = '🔌 Desconectado — Reintentando...';
+  });
+  
+  socket.on('mensaje-voz-recibido', (datos) => {
+    agregarEnPantallaRadio(`📥 ${datos.remitente}: ${datos.texto}`, true);
+    hablar(datos.texto);
+  });
+  
+  socket.on('listaVuelos', (todos) => { });
+  socket.on('vuelosActualizados', (datos) => { });
+  
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    reconocimiento = new SR();
+    reconocimiento.lang = 'es-AR';
+    reconocimiento.continuous = false;
+    reconocimiento.interimResults = false;
+    reconocimiento.onresult = e => procesarEntradaVoz(e.results[0][0].transcript.trim().toUpperCase());
+    reconocimiento.onend = () => {
+      if (esperandoEncargado) try { reconocimiento.start(); } catch(e) {}
+    };
+    
+    reconocimientoRadio = new SR();
+    reconocimientoRadio.lang = 'es-AR';
+    reconocimientoRadio.continuous = true;
+    reconocimientoRadio.interimResults = true;
+    reconocimientoRadio.onresult = e => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        textoAcumulado += e.results[i][0].transcript + " ";
+        actualizarTextoParcial(textoAcumulado);
+      }
+    };
+    reconocimientoRadio.onend = () => {
+      if (transmitiendo) try { reconocimientoRadio.start(); } catch(e) {}
+    };
+  }
+}
+window.onload = iniciarConexion;
+</script>
+</body>
+</html>

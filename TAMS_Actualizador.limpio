@@ -1,0 +1,115 @@
+Option Explicit
+
+Const DIRECCION_SALIDAS = "http://www.tams.com.ar/organismos/vuelos.aspx?tipo=S"
+Const CARPETA_SERVIDOR = "C:\cortes_choferes\"
+Const CARPETA_APPDOLI = "C:\Appdoli\"
+Const ARCHIVO_SALIDA = "vuelos_fuente.json"
+Const INTERVALO_MINUTOS = 1
+
+Dim fso
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+CrearCarpeta CARPETA_SERVIDOR
+CrearCarpeta CARPETA_APPDOLI
+
+MsgBox "✅ Modo PRUEBA: trae TODO sin filtros", 64, "TAMS -> JSON PRUEBA"
+
+Do
+    Dim http, html, re, filas, filaHtml, celdas
+    Dim i, j, nroVuelo, matricula, cia, horaSalida
+    Dim posicion, destino, terminal
+    Dim datos, primeraLinea
+    
+    datos = "[" & vbCrLf
+    primeraLinea = True
+    
+    On Error Resume Next
+    Set http = CreateObject("MSXML2.XMLHTTP.6.0")
+    If Err.Number <> 0 Then
+        Set http = CreateObject("MSXML2.XMLHTTP")
+    End If
+    Err.Clear
+    On Error GoTo 0
+    
+    http.Open "GET", DIRECCION_SALIDAS, False
+    http.Send
+    
+    If http.Status = 200 Then
+        html = http.responseText
+        
+        Set re = New RegExp
+        re.Global = True
+        re.IgnoreCase = True
+        re.Pattern = "<tr[^>]*>([\s\S]*?)</tr>"
+        Set filas = re.Execute(html)
+        
+        For i = 1 To filas.Count - 1
+            filaHtml = filas(i).SubMatches(0)
+            re.Pattern = "<t[dh][^>]*>([\s\S]*?)</t[dh]>"
+            Set celdas = re.Execute(filaHtml)
+            
+            If celdas.Count >= 2 Then
+                cia = Limpiar(celdas(0).SubMatches(0))
+                nroVuelo = Limpiar(celdas(1).SubMatches(0))
+                matricula = ""
+                If celdas.Count >= 4 Then matricula = Limpiar(celdas(3).SubMatches(0))
+                
+                ' ==== SIN FILTROS: TRAER TODO LO QUE PASE POR AQUÍ ====
+                If Len(nroVuelo) >= 3 Then
+                    If primeraLinea = False Then
+                        datos = datos & "," & vbCrLf
+                    End If
+                    primeraLinea = False
+                    datos = datos & "  {" & vbCrLf & _
+                    "    ""cia"": """ & EscaparJson(cia) & """," & vbCrLf & _
+                    "    ""vuelo"": """ & EscaparJson(nroVuelo) & """," & vbCrLf & _
+                    "    ""matricula"": """ & EscaparJson(matricula) & """" & vbCrLf & _
+                    "  }"
+                End If
+            End If
+        Next
+    Else
+        datos = "[ { ""error"": ""No se pudo conectar a TAMS - Código: " & http.Status & """ } ]"
+    End If
+    
+    datos = datos & vbCrLf & "]"
+    
+    GuardarArchivo CARPETA_SERVIDOR & ARCHIVO_SALIDA, datos
+    GuardarArchivo CARPETA_APPDOLI & ARCHIVO_SALIDA, datos
+    
+    Set http = Nothing
+    WScript.Sleep 60000 * INTERVALO_MINUTOS
+Loop
+
+Function Limpiar(texto)
+    If IsNull(texto) Then texto = ""
+    texto = Trim(texto)
+    texto = Replace(texto, "&nbsp;", " ")
+    texto = Replace(texto, "&amp;", "&")
+    Do While InStr(texto, "  ") > 0
+        texto = Replace(texto, "  ", " ")
+    Loop
+    Limpiar = Trim(texto)
+End Function
+
+Function EscaparJson(texto)
+    texto = Replace(texto, "\", "\\")
+    texto = Replace(texto, """", "\""")
+    EscaparJson = texto
+End Function
+
+Sub GuardarArchivo(ruta, contenido)
+    Dim archivo
+    Set archivo = fso.CreateTextFile(ruta, True)
+    archivo.Write contenido
+    archivo.Close
+    Set archivo = Nothing
+End Sub
+
+Sub CrearCarpeta(ruta)
+    On Error Resume Next
+    If Not fso.FolderExists(ruta) Then
+        fso.CreateFolder ruta
+    End If
+    On Error GoTo 0
+End Sub

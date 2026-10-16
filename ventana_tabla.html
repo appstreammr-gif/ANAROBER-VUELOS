@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Appstream — AEP Aeroparque</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --primario: #FF7A30;
+            --secundario: #165DFF;
+            --exito: #00B42A;
+            --naranja-texto: #E67700;
+            --verde-texto: #009933;
+            --fondo: #F2F3F5;
+            --superficie: #FFFFFF;
+            --texto-oscuro: #1D2129;
+            --texto-medio: #4E5969;
+            --texto-claro: #86909C;
+            --borde-suave: #E5E6EB;
+            --sombra-suave: 0 2px 6px rgba(0, 0, 0, 0.04);
+            --sombra-media: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --radio-suave: 10px;
+            --radio-medio: 14px;
+            --radio-fuerte: 18px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #F7F8FA 0%, #EDEFF2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            font-size: 14px;
+            color: var(--texto-oscuro);
+        }
+        .contenedor-principal { max-width: 1700px; margin: 0 auto; }
+        .cabecera {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+        }
+        .titulo {
+            font-size: 26px; font-weight: 800;
+            background: linear-gradient(90deg, #FF7A30 0%, #FF9F1C 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .actualizacion {
+            font-size: 14px; color: var(--texto-medio); background: var(--superficie);
+            padding: 8px 16px; border-radius: var(--radio-suave);
+            box-shadow: var(--sombra-suave); display: flex; align-items: center; gap: 8px;
+        }
+        .punto-vivo {
+            width: 8px; height: 8px; background: var(--exito);
+            border-radius: 50%; animation: parpadeo 2s infinite;
+        }
+        @keyframes parpadeo {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ✅ MARQUESINA CON TRANSICIÓN SUAVE */
+        .marquesina-fotos {
+            background: var(--superficie);
+            border-radius: var(--radio-suave);
+            box-shadow: var(--sombra-suave);
+            padding: 14px 24px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--exito);
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        .marquesina-contenedor {
+            width: 100%;
+            position: relative;
+        }
+        .marquesina-texto {
+            font-size: 15px;
+            color: var(--texto-oscuro);
+            font-weight: 500;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+        }
+        .marquesina-texto.saliendo {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        .marquesina-texto.entrando {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        .marquesina-vuelo-numero {
+            font-weight: 800;
+            color: var(--secundario);
+            margin: 0 6px;
+        }
+        .marquesina-vacio {
+            color: var(--texto-claro);
+            font-style: italic;
+        }
+
+        .barra-filtros {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+            flex-wrap: wrap; background: var(--superficie);
+            padding: 18px 22px; border-radius: var(--radio-medio);
+            box-shadow: var(--sombra-suave);
+        }
+        .filtro-grupo {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; color: var(--texto-medio);
+        }
+        .barra-filtros select {
+            padding: 8px 14px; font-size: 14px; border: 1px solid var(--borde-suave);
+            border-radius: var(--radio-suave); background: #FAFBFC;
+            color: var(--texto-oscuro); cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .barra-filtros select:focus {
+            outline: none; border-color: var(--primario);
+            box-shadow: 0 0 0 3px rgba(255, 122, 48, 0.15);
+        }
+        .contenedor-tablas { display: flex; gap: 24px; flex-wrap: nowrap; align-items: flex-start; }
+        .tabla-contenedor {
+            background: var(--superficie); border-radius: var(--radio-fuerte);
+            box-shadow: var(--sombra-media); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .tabla-salidas { flex: 1.6; min-width: 1000px; }
+        .tabla-arribos { flex: 1; min-width: 520px; }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        caption {
+            text-align: left; font-weight: 700; color: var(--texto-oscuro);
+            padding: 18px 20px 12px; font-size: 18px;
+            border-bottom: 1px solid var(--borde-suave);
+            background: linear-gradient(180deg, #FAFBFC 0%, #FFFFFF 100%);
+        }
+        th, td {
+            padding: 14px 12px; text-align: center;
+            transition: background 0.2s ease;
+        }
+        th {
+            background: linear-gradient(180deg, #F7F8FA 0%, #F2F3F5 100%);
+            font-weight: 700; color: var(--texto-medio); font-size: 13px;
+            border-bottom: 2px solid var(--borde-suave);
+            text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        td { border-bottom: 1px solid #F2F3F5; color: var(--texto-oscuro); font-size: 14px; }
+        tbody tr:hover { background: #FFF7F0; }
+        tbody tr:last-child td { border-bottom: none; }
+        .col-imp { white-space: normal; min-width: 200px; text-align: left; }
+        .col-estado { min-width: 130px; }
+        .sin-datos { padding: 40px 20px; color: var(--texto-claro); font-style: italic; text-align: center; }
+        .vuelo-numero { 
+            font-weight: 800; color: var(--secundario); 
+            cursor: pointer; text-decoration: underline;
+        }
+        .vuelo-numero:hover { color: var(--primario); }
+        .etiqueta-imp {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+            background: #E8F3FF; color: var(--secundario);
+            margin-bottom: 4px;
+        }
+        .estado-asignado { font-weight: 700; color: var(--naranja-texto); font-size: 14px; }
+        .estado-finalizado { font-weight: 700; color: var(--verde-texto); font-size: 14px; }
+        
+        /* MODAL DE FOTOS */
+        .modal-fotos {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 999; display: none;
+            padding: 20px; overflow-y: auto;
+        }
+        .modal-abierto { display: block; }
+        .contenido-modal {
+            max-width: 900px; margin: 30px auto; background: white;
+            border-radius: 12px; padding: 25px;
+        }
+        .cerrar-modal {
+            float: right; font-size: 28px; cursor: pointer;
+            color: #888; margin-top: -10px;
+        }
+        .cerrar-modal:hover { color: red; }
+        .foto-vuelo { max-width: 100%; margin: 15px 0; border-radius: 8px; }
+        .sin-fotos { text-align: center; color: #888; padding: 30px; }
+    </style>
+</head>
+<body>
+<div class="contenedor-principal">
+    <div class="cabecera">
+        <div class="titulo">Appstream — AEP Aeroparque</div>
+        <div class="actualizacion">
+            <span class="punto-vivo"></span>
+            Última actualización: <span id="fechaHora"></span>
+        </div>
+    </div>
+
+    <!-- ✅ MARQUESINA CON EFECTO DE DESVANECIMIENTO -->
+    <div class="marquesina-fotos">
+        <div class="marquesina-contenedor">
+            <div id="textoMarquesina" class="marquesina-texto">
+                <span class="marquesina-vacio">Sin vuelos con material adjunto</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="barra-filtros">
+        <div class="filtro-grupo">
+            Desde
+            <select id="filtroHorasAtras" onchange="dibujarTodo()">
+                <option value="0">0 horas</option>
+                <option value="1" selected>1 hora</option>
+                <option value="2">2 horas</option>
+                <option value="999">Todas</option>
+            </select>
+            antes de la hora actual
+        </div>
+        <div class="filtro-grupo">
+            Hasta
+            <select id="filtroHorasAdelante" onchange="dibujarTodo()">
+                <option value="6">6 horas</option>
+                <option value="12" selected>12 horas</option>
+                <option value="24">24 horas</option>
+                <option value="999">Todas</option>
+            </select>
+            después de la hora actual
+        </div>
+        <div class="filtro-grupo">
+            Encargado:
+            <select id="filtroEncargado" onchange="dibujarTodo()">
+                <option value="">Todos</option>
+                <option value="1">1</option>
+                <option value="01">01</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="3N">3N</option>
+                <option value="5">5</option>
+                <option value="5N">5N</option>
+            </select>
+        </div>
+    </div>
+    <div class="contenedor-tablas">
+        <div class="tabla-contenedor tabla-salidas">
+            <table>
+                <caption>✈️ Salidas</caption>
+                <thead>
+                    <tr>
+                        <th>Vuelo</th>
+                        <th>Posición</th>
+                        <th>Matrícula</th>
+                        <th>STD</th>
+                        <th>Encargado</th>
+                        <th>Hora Subida</th>
+                        <th>Hora Bajada</th>
+                        <th class="col-imp">IMP / Comentario</th>
+                        <th class="col-estado">ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoSalidas"></tbody>
+            </table>
+        </div>
+        <div class="tabla-contenedor tabla-arribos">
+            <table>
+                <caption>🛬 Arribos</caption>
+                <thead>
+                    <tr>
+                        <th>Vuelo/Arribo</th>
+                        <th>Posición</th>
+                        <th>Matrícula</th>
+                        <th>Encargado</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoArribos"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE FOTOS -->
+<div id="modalFotos" class="modal-fotos" onclick="cerrarModalFuera(event)">
+    <div class="contenido-modal">
+        <span class="cerrar-modal" onclick="cerrarModalFotos()">&times;</span>
+        <h2 id="tituloModalFotos">📸 Fotos del Vuelo</h2>
+        <div id="galeriaFotos"></div>
+    </div>
+</div>
+
+<script>
+const socket = io(window.location.origin, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000
+});
+
+const baseVuelos = {};
+const vuelosConFotos = [];
+let indiceMarquesina = 0;
+let temporizadorMarquesina = null;
+let estaCambiando = false;
+
+function tieneValor(v) {
+    return v !== undefined && v !== null && v !== '' && v !== '—';
+}
+function clave(v) {
+    return String((v.nroVuelo || v.vuelo || '') + '|' + (v.fecha || '')).trim();
+}
+function obtenerEstadoVuelo(v) {
+    const tieneSubida = tieneValor(v.horaSubida);
+    const tieneBajada = tieneValor(v.horaBajada);
+    if (tieneSubida && tieneBajada) {
+        return { clase: 'estado-finalizado', texto: 'FINALIZADO' };
+    } else {
+        return { clase: 'estado-asignado', texto: 'ASIGNADO' };
+    }
+}
+function procesarVuelo(v) {
+    const id = clave(v);
+    if (!id) return;
+    
+    baseVuelos[id] = {
+        nroVuelo: v.nroVuelo || v.vuelo || '—',
+        posicion: tieneValor(v.posicion) ? v.posicion : '—',
+        matricula: tieneValor(v.matricula) ? v.matricula : '—',
+        encargado: tieneValor(v.encargadoAsignado) ? v.encargadoAsignado : (tieneValor(v.encargado) ? v.encargado : '—'),
+        std: tieneValor(v.STD) ? v.STD : (tieneValor(v.horaSalida) ? v.horaSalida : '—'),
+        horaSubida: tieneValor(v.horaSubida) ? v.horaSubida : '—',
+        horaBajada: tieneValor(v.horaBajada) ? v.horaBajada : '—',
+        comentario: tieneValor(v.comentario) ? v.comentario : '',
+        esArribo: !!v.esArribo || (tieneValor(v.STA) && !tieneValor(v.STD)),
+        imp: tieneValor(v.IMP) ? v.IMP : (tieneValor(v.imp) ? v.imp : '')
+    };
+}
+function procesarLista(vuelos) {
+    if (!vuelos || !Array.isArray(vuelos)) return;
+    vuelos.forEach(procesarVuelo);
+    dibujarTodo();
+    verificarFotosTodos();
+}
+
+socket.on('connect', () => {
+    console.log('✅ Conectado al servidor — esperando vuelos...');
+});
+socket.on('listaVuelos', (datos) => {
+    console.log('📋 Recibidos:', datos.length, 'vuelos');
+    procesarLista(datos);
+});
+socket.on('vuelosActualizados', (d) => {
+    if (d?.vuelos) procesarLista(d.vuelos);
+    else if (Array.isArray(d)) procesarLista(d);
+});
+socket.on('vueloAsignado', (v) => {
+    procesarVuelo(v);
+    dibujarTodo();
+    verificarFotosVuelo(v.nroVuelo || v.vuelo);
+});
+socket.on('vueloCerrado', (v) => {
+    procesarVuelo(v);
+    dibujarTodo();
+    verificarFotosVuelo(v.nroVuelo || v.vuelo);
+});
+
+socket.on('fotos-vuelo', (respuesta) => {
+    const existe = vuelosConFotos.includes(respuesta.vuelo);
+    if (respuesta.fotos.length > 0) {
+        if (!existe) vuelosConFotos.push(respuesta.vuelo);
+    } else {
+        if (existe) {
+            const idx = vuelosConFotos.indexOf(respuesta.vuelo);
+            if (idx > -1) vuelosConFotos.splice(idx, 1);
+            if (indiceMarquesina >= vuelosConFotos.length) indiceMarquesina = 0;
+        }
+    }
+    if (!estaCambiando) actualizarMarquesinaInmediato();
+});
+
+setInterval(dibujarTodo, 3000);
+setInterval(() => {
+    document.getElementById('fechaHora').textContent =
+        new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+}, 60000);
+
+function verificarFotosVuelo(nroVuelo) {
+    if (!nroVuelo || nroVuelo === '—') return;
+    socket.emit('listar-fotos', nroVuelo);
+}
+function verificarFotosTodos() {
+    Object.values(baseVuelos).forEach(v => verificarFotosVuelo(v.nroVuelo));
+}
+
+// ✅ EFECTO SUAVE DE CAMBIO
+function actualizarMarquesinaInmediato() {
+    const caja = document.getElementById('textoMarquesina');
+    if (vuelosConFotos.length === 0) {
+        caja.innerHTML = '<span class="marquesina-vacio">Sin vuelos con material adjunto</span>';
+        return;
+    }
+    const vueloActual = vuelosConFotos[indiceMarquesina];
+    caja.innerHTML = `📷 VUELO <span class="marquesina-vuelo-numero">${vueloActual}</span> TIENE MATERIAL ADJUNTO`;
+}
+
+function cambiarMarquesinaConEfecto() {
+    if (estaCambiando) return;
+    estaCambiando = true;
+    
+    const caja = document.getElementById('textoMarquesina');
+    
+    // Salida suave
+    caja.classList.add('saliendo');
+    
+    setTimeout(() => {
+        indiceMarquesina = (indiceMarquesina + 1) % vuelosConFotos.length;
+        const vueloActual = vuelosConFotos[indiceMarquesina];
+        
+        caja.classList.remove('saliendo');
+        caja.classList.add('entrando');
+        caja.innerHTML = `📷 VUELO <span class="marquesina-vuelo-numero">${vueloActual}</span> TIENE MATERIAL ADJUNTO`;
+        
+        setTimeout(() => {
+            caja.classList.remove('entrando');
+            estaCambiando = false;
+        }, 600);
+    }, 600);
+}
+
+function iniciarRotacionMarquesina() {
+    if (temporizadorMarquesina) clearInterval(temporizadorMarquesina);
+    temporizadorMarquesina = setInterval(() => {
+        if (vuelosConFotos.length > 0) {
+            cambiarMarquesinaConEfecto();
+        }
+    }, 5000);
+}
+iniciarRotacionMarquesina();
+
+function coincideEncargado(filtro, valor) {
+    if (!filtro) return true;
+    if (!valor) return false;
+    return filtro === valor || filtro === '0' + valor || '0' + filtro === valor;
+}
+function dibujarTodo() {
+    const filtroEnc = document.getElementById('filtroEncargado').value.trim();
+    document.getElementById('cuerpoSalidas').innerHTML = '';
+    document.getElementById('cuerpoArribos').innerHTML = '';
+    
+    Object.values(baseVuelos).forEach(v => {
+        if (filtroEnc && !coincideEncargado(filtroEnc, v.encargado)) return;
+        const esSalida = v.std !== '—';
+        const esArribo = v.esArribo || (!esSalida);
+        if (esSalida) filaSalida(v);
+        if (esArribo) filaArribo(v);
+    });
+    
+    if (!document.getElementById('cuerpoSalidas').innerHTML) {
+        document.getElementById('cuerpoSalidas').innerHTML =
+            '<tr><td colspan="9" class="sin-datos">Sin vuelos activos</td></tr>';
+    }
+    if (!document.getElementById('cuerpoArribos').innerHTML) {
+        document.getElementById('cuerpoArribos').innerHTML =
+            '<tr><td colspan="4" class="sin-datos">Esperando vuelos desde ANAROBER...</td></tr>';
+    }
+}
+
+function filaSalida(v) {
+    const estado = obtenerEstadoVuelo(v);
+    const fila = document.createElement('tr');
+    fila.innerHTML = `
+        <td class="vuelo-numero" onclick="abrirFotosVuelo('${v.nroVuelo.replace(/'/g, "\\'")}')">
+            ${v.nroVuelo}
+        </td>
+        <td>${v.posicion}</td>
+        <td>${v.matricula}</td>
+        <td>${v.std}</td>
+        <td>${v.encargado}</td>
+        <td>${v.horaSubida}</td>
+        <td>${v.horaBajada}</td>
+        <td class="col-imp">
+            ${v.imp ? `<span class="etiqueta-imp">${v.imp}</span> ` : ''}
+            ${v.comentario || ''}
+        </td>
+        <td class="${estado.clase}">${estado.texto}</td>
+    `;
+    document.getElementById('cuerpoSalidas').appendChild(fila);
+}
+function filaArribo(v) {
+    const fila = document.createElement('tr');
+    fila.innerHTML = `
+        <td class="vuelo-numero" onclick="abrirFotosVuelo('${v.nroVuelo.replace(/'/g, "\\'")}')">
+            ${v.nroVuelo}
+        </td>
+        <td>${v.posicion}</td>
+        <td>${v.matricula}</td>
+        <td>${v.encargado}</td>
+    `;
+    document.getElementById('cuerpoArribos').appendChild(fila);
+}
+
+async function abrirFotosVuelo(nroVuelo) {
+    document.getElementById('tituloModalFotos').textContent = `📸 Fotos del Vuelo ${nroVuelo}`;
+    document.getElementById('galeriaFotos').innerHTML = '<p style="text-align:center; padding:20px;">Cargando...</p>';
+    document.getElementById('modalFotos').classList.add('modal-abierto');
+    
+    socket.emit('listar-fotos', nroVuelo);
+    socket.once('fotos-vuelo', (respuesta) => {
+        if (respuesta.fotos.length > 0) {
+            if (!vuelosConFotos.includes(nroVuelo)) vuelosConFotos.push(nroVuelo);
+        } else {
+            const idx = vuelosConFotos.indexOf(nroVuelo);
+            if (idx > -1) vuelosConFotos.splice(idx, 1);
+            if (indiceMarquesina >= vuelosConFotos.length) indiceMarquesina = 0;
+        }
+        actualizarMarquesinaInmediato();
+        
+        const galeria = document.getElementById('galeriaFotos');
+        if (respuesta.fotos.length === 0) {
+            galeria.innerHTML = '<p class="sin-fotos">📷 No hay fotos subidas para este vuelo</p>';
+        } else {
+            galeria.innerHTML = respuesta.fotos.map(url => 
+                `<img src="${url}" class="foto-vuelo" alt="Foto del vuelo ${nroVuelo}">`
+            ).join('');
+        }
+    });
+}
+function cerrarModalFotos() {
+    document.getElementById('modalFotos').classList.remove('modal-abierto');
+}
+function cerrarModalFuera(event) {
+    if (event.target.id === 'modalFotos') cerrarModalFotos();
+}
+
+document.getElementById('fechaHora').textContent =
+    new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appstream | Resumen de Vuelos - 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0057B8',
+                        secondary: '#0091EA',
+                        dark: '#0F172A',
+                        grupo1: '#3B82F6',
+                        grupo2: '#10B981',
+                        grupo3: '#F59E0B',
+                        grupo4: '#8B5CF6',
+                        grupo5: '#EF4444'
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .shadow-up { box-shadow: 0 10px 25px -5px rgba(0, 87, 184, 0.12); }
+        .grupo-tag { @apply px-3 py-1 rounded-full text-xs font-medium text-white; }
+    </style>
+</head>
+<body class="bg-slate-50 font-inter text-slate-700">
+
+    <header class="bg-gradient-to-r from-primary to-secondary text-white py-5 px-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa fa-shield-alt fa-2x"></i>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold">APPSTREAM</h1>
+                    <p class="text-sm text-blue-100">Resumen de Vuelos Asignados • 2026</p>
+                </div>
+            </div>
+            <a href="ventana_appstream.html" class="inline-block text-white hover:text-white/80 bg-white/20 px-3 py-1 rounded-lg text-sm">
+                ← Volver a Cargar
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+        <section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-grupo1">
+                <h3 class="text-sm text-slate-500">Grupo 1</h3>
+                <p class="text-2xl font-bold text-grupo1" id="contadorG1">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-grupo2">
+                <h3 class="text-sm text-slate-500">Grupo 2</h3>
+                <p class="text-2xl font-bold text-grupo2" id="contadorG2">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-grupo3">
+                <h3 class="text-sm text-slate-500">Grupo 3</h3>
+                <p class="text-2xl font-bold text-grupo3" id="contadorG3">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-grupo4">
+                <h3 class="text-sm text-slate-500">Grupo 4</h3>
+                <p class="text-2xl font-bold text-grupo4" id="contadorG4">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-grupo5">
+                <h3 class="text-sm text-slate-500">Grupo 5</h3>
+                <p class="text-2xl font-bold text-grupo5" id="contadorG5">0</p>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-2xl shadow-up p-6">
+            <h2 class="text-xl font-semibold text-dark mb-5 flex items-center gap-2">
+                <i class="fa fa-list text-primary"></i> Lista Completa
+                <span id="totalResumen" class="ml-auto text-sm font-normal text-slate-500">Total: 0</span>
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600">
+                            <th class="px-4 py-3 text-left">Matrícula</th>
+                            <th class="px-4 py-3 text-left">N° de Vuelo</th>
+                            <th class="px-4 py-3 text-left">Posición</th>
+                            <th class="px-4 py-3 text-left">Grupo Asignado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaResumen" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-10 py-4 text-center text-slate-500 text-sm border-t border-slate-200">
+        © 2026 Appstream Sistemas • Gestión Operativa
+    </footer>
+
+    <script>
+        const socket = io();
+        const coloresGrupo = {1:'bg-grupo1',2:'bg-grupo2',3:'bg-grupo3',4:'bg-grupo4',5:'bg-grupo5'};
+        const tabla = document.getElementById('tablaResumen');
+        const totalResumen = document.getElementById('totalResumen');
+        const contadores = {1:document.getElementById('contadorG1'),2:document.getElementById('contadorG2'),3:document.getElementById('contadorG3'),4:document.getElementById('contadorG4'),5:document.getElementById('contadorG5')};
+
+        socket.on('listaVuelosActualizada', (listaVuelos) => {
+            tabla.innerHTML = '';
+            let conteo = {1:0,2:0,3:0,4:0,5:0};
+
+            if (listaVuelos.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">No hay vuelos cargados.</td></tr>`;
+                totalResumen.textContent = 'Total: 0';
+                Object.values(contadores).forEach(el => el.textContent = '0');
+                return;
+            }
+
+            listaVuelos.forEach(vuelo => {
+                const fila = document.createElement('tr');
+                fila.className = 'hover:bg-slate-50 transition-colors';
+                fila.innerHTML = `
+                    <td class="px-4 py-4 font-semibold text-primary">${vuelo.matricula}</td>
+                    <td class="px-4 py-4 font-medium">${vuelo.nroVuelo}</td>
+                    <td class="px-4 py-4">${vuelo.posicion}</td>
+                    <td class="px-4 py-4">
+                        ${vuelo.grupo ? `<span class="grupo-tag ${coloresGrupo[vuelo.grupo]}">Grupo ${vuelo.grupo}</span>` : '<span class="text-slate-400">Sin asignar</span>'}
+                    </td>
+                `;
+                tabla.appendChild(fila);
+                if (vuelo.grupo) conteo[vuelo.grupo]++;
+            });
+
+            totalResumen.textContent = `Total: ${listaVuelos.length}`;
+            for (let g in conteo) contadores[g].textContent = conteo[g];
+        });
+    </script>
+</body>
+</html>
+

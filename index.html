@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>ANAROBER — SISTEMA DE VUELOS</title>
+<script src="config.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  min-height: 100%;
+  background: #000080;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 16px;
+  color: #FFFFFF;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.marco-exterior {
+  border: 3px solid #C0C0C0;
+  border-top-color: #FFFFFF;
+  border-left-color: #FFFFFF;
+  margin: 0 auto;
+  max-width: 480px;
+  width: 100%;
+  background: #000080;
+}
+.cabecera {
+  border: 2px solid #C0C0C0;
+  border-top-color: #808080;
+  border-left-color: #808080;
+  margin: 8px;
+  padding: 12px 8px;
+  text-align: center;
+  background: #000080;
+}
+.titulo-principal {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FFFFFF;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.version {
+  font-size: 13px;
+  color: #C0C0C0;
+}
+.copyright {
+  font-size: 12px;
+  color: #80FFFF;
+  margin-top: 4px;
+}
+.cuadro-opciones {
+  border: 2px solid #C0C0C0;
+  border-top-color: #808080;
+  border-left-color: #808080;
+  margin: 8px;
+  padding: 15px 12px;
+  background: #000080;
+}
+.titulo-cuadro {
+  text-align: center;
+  font-weight: bold;
+  color: #FFFF00;
+  font-size: 17px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #404040;
+  padding-bottom: 6px;
+}
+.instruccion {
+  text-align: center;
+  color: #FFFFFF;
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+.opcion {
+  display: flex;
+  align-items: center;
+  padding: 10px 8px;
+  margin-bottom: 6px;
+  color: #FFFFFF;
+  text-decoration: none;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.opcion:hover, .opcion:active {
+  background: #008080;
+  border-color: #80FFFF;
+}
+.opcion-numero {
+  color: #FFFF00;
+  font-weight: bold;
+  min-width: 36px;
+  display: inline-block;
+}
+.opcion-texto {
+  flex: 1;
+  padding-left: 8px;
+  font-size: 16px;
+}
+.pie {
+  margin: 8px;
+  border: 2px solid #C0C0C0;
+  border-top-color: #808080;
+  border-left-color: #808080;
+  padding: 8px;
+  font-size: 12px;
+  color: #C0C0C0;
+}
+.estado-conectado {
+  color: #00FF00;
+  font-weight: bold;
+}
+.direccion-servidor {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #606060;
+  word-break: break-all;
+}
+</style>
+</head>
+<body>
+<div class="marco-exterior">
+  <div class="cabecera">
+    <div class="titulo-principal">ANAROBER — SISTEMA DE GESTIÓN DE VUELOS</div>
+    <div class="version">Versión 2.1.0</div>
+    <div class="copyright">(c) 2026 ANAROBER — Plataforma Cloud Conectada</div>
+  </div>
+  <div class="cuadro-opciones">
+    <div class="titulo-cuadro">SELECCIONE EL ENCARGADO QUE CORRESPONDA</div>
+    
+    <!-- ✅ TODOS con v MINÚSCULA — igual que tus archivos -->
+    <a href="ventana_encargado1.html" class="opcion">
+      <span class="opcion-numero">[1]</span>
+      <span class="opcion-texto">ENCARGADO 1 — PÉREZ</span>
+    </a>
+    
+    <a href="ventana_encargado2.html" class="opcion">
+      <span class="opcion-numero">[2]</span>
+      <span class="opcion-texto">ENCARGADO 2 — SÁNCHEZ</span>
+    </a>
+    
+    <a href="ventana_encargado3.html" class="opcion">
+      <span class="opcion-numero">[3]</span>
+      <span class="opcion-texto">ENCARGADO 3</span>
+    </a>
+    
+    <a href="ventana_encargado4.html" class="opcion">
+      <span class="opcion-numero">[4]</span>
+      <span class="opcion-texto">ENCARGADO 4 — MARÍA</span>
+    </a>
+    
+    <a href="ventana_encargado5.html" class="opcion">
+      <span class="opcion-numero">[5]</span>
+      <span class="opcion-texto">ENCARGADO 5</span>
+    </a>
+    
+    <a href="anarober.html" class="opcion" style="margin-top:12px; background:#003333; border-color:#00FFFF;">
+      <span class="opcion-numero">▶</span>
+      <span class="opcion-texto">CONSOLA PRINCIPAL — ANAROBER</span>
+    </a>
+  </div>
+  <div class="pie">
+    <div class="estado-conectado">✅ SISTEMA CONECTADO — CLOUD ACTIVA</div>
+    <div class="direccion-servidor" id="dirServidor"></div>
+  </div>
+</div>
+<script>
+document.getElementById('dirServidor').textContent = 
+  'Servidor: ' + SERVIDOR.url;
+</script>
+</body>
+</html>

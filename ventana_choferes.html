@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventana Choferes | Appstream AND Doli • El Cerebro 2026</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0057B8',
+            secondary: '#0066CC',
+            accent: '#007AFF',
+            white: '#FFFFFF',
+            dark: '#1A202C',
+            medium: '#4A5568',
+            light: '#718096',
+            success: '#109860',
+            warning: '#F59E0B',
+            danger: '#E11D48',
+            blocked: '#9CA3AF',
+            border: '#E2E8F0',
+            cardBg: '#F8FAFC',
+            fondoPantalla: '#F0F4F8',
+          },
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+            display: ['"Inter"', 'sans-serif'],
+            num: ['"Inter"', 'monospace'],
+          },
+          boxShadow: {
+            'app': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+            'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .app-container { @apply min-h-screen bg-fondoPantalla font-sans text-dark; }
+      .app-header { @apply bg-primary text-white py-5 px-8 text-center rounded-b-3xl shadow-app mb-6; }
+      .app-title { @apply font-display font-bold text-[28px] tracking-tight uppercase; }
+      .app-subtitle { @apply font-display font-medium text-white/90 text-[15px] mt-1; }
+      .estado-conexion { @apply max-w-md mx-auto px-4 py-3 mb-4 text-center font-semibold rounded-lg; }
+      .estado-conectado { @apply bg-emerald-100 text-emerald-700 border border-emerald-200; }
+      .estado-desconectado { @apply bg-rose-100 text-rose-700 border border-rose-200; }
+      .form-card { @apply max-w-md mx-auto bg-white rounded-xl p-6 shadow-card border border-border mb-8; }
+      .titulo-seccion { @apply text-center text-dark font-semibold text-[20px] mb-6 text-indigo-700; }
+      .campo-form { @apply w-full p-3 mb-4 border border-border rounded-lg text-[16px] font-medium focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all; }
+      .btn-enviar { @apply w-full bg-accent hover:bg-accent/90 text-white font-semibold py-3 px-4 rounded-lg shadow-app transition-all text-[16px] uppercase tracking-wider; }
+      .info-dato { @apply flex justify-between py-2 border-b border-border/50 text-[15px]; }
+      .info-etiqueta { @apply text-medium font-normal; }
+      .info-valor { @apply text-dark font-medium text-right; }
+      .contador-activo { @apply text-center font-num font-bold text-[64px] text-accent my-6; }
+      .mensaje-accion { @apply max-w-md mx-auto text-center p-4 rounded-lg font-medium my-4; }
+      .mensaje-info { @apply bg-sky-100 text-sky-700 border border-sky-200; }
+      .chofer-card { @apply bg-white rounded-xl p-8 shadow-card border border-border transition-all duration-200 text-center; }
+      .aviso-popup { @apply fixed inset-0 bg-black/70 flex items-center justify-center z-50; }
+      .aviso-contenido { @apply bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-warning; }
+      .aviso-titulo { @apply text-center text-warning font-bold text-[22px] mb-4 uppercase; }
+      .aviso-texto { @apply text-center text-dark text-[16px] leading-relaxed mb-6; }
+      .aviso-boton { @apply block w-full text-center bg-warning hover:bg-warning/90 text-white font-semibold py-3 px-4 rounded-lg transition-all; }
+    }
+  </style>
+</head>
+<body class="app-container">
+  <header class="app-header">
+    <h1 class="app-title">Ventana Choferes</h1>
+    <h2 class="app-subtitle">• Appstream AND Doli • El Cerebro 2026</h2>
+  </header>
+
+  <div id="estadoConexion" class="estado-conexion estado-desconectado">🔴 BUSCANDO CONEXIÓN CON SERVIDOR...</div>
+  <div id="mensajeAccion" class="mensaje-accion mensaje-info" style="display: none;"></div>
+
+  <div id="seccionFormulario" class="form-card">
+    <h3 class="titulo-seccion">INGRESO DE DATOS</h3>
+    <label class="block text-dark font-medium mb-1">Legajo</label>
+    <input type="text" id="inputLegajo" class="campo-form" placeholder="Ej: 24799" maxlength="6">
+    <label class="block text-dark font-medium mb-1">Nombre Completo</label>
+    <input type="text" id="inputNombre" class="campo-form bg-gray-100" placeholder="Se completa automáticamente" readonly>
+    <input type="hidden" id="inputCondicion">
+    <input type="hidden" id="tipoCorteFijo" value="CORTE DE 1 HORA / 60 MIN">
+    <button id="btnEnviarDatos" class="btn-enviar">✅ INICIAR CORTE</button>
+  </div>
+
+  <div id="seccionActivo" class="tarjeta-unica" style="display: none;">
+    <div class="chofer-card habilitado">
+      <div class="icono-persona">👤</div>
+      <h3 class="chofer-nombre" id="datoNombre">---</h3>
+      <p class="chofer-legajo" id="datoLegajo">Legajo: ---</p>
+      <div class="contador-tiempo" id="contadorActivo">60:00</div>
+      <div class="progreso-linea"><div class="progreso-relleno" id="progresoActivo" style="width: 0%"></div></div>
+      <div class="mt-6 pt-4 border-t border-border/60 text-left">
+        <div class="dato-fila"><span class="dato-etiqueta">Hora Asignada</span><span class="dato-valor" id="datoHoraAsignada">---</span></div>
+        <div class="dato-fila"><span class="dato-etiqueta">Hora Ingreso Real</span><span class="dato-valor" id="datoHoraIngreso">---</span></div>
+        <div class="dato-fila"><span class="dato-etiqueta">Condición</span><span class="dato-valor font-semibold" id="datoCondicion">---</span></div>
+        <div class="dato-fila"><span class="dato-etiqueta">Tipo de Corte</span><span class="dato-valor" id="datoTipoCorte">CORTE DE 1 HORA / 60 MIN</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="avisoFinal" class="aviso-popup" style="display: none;">
+    <div class="aviso-contenido">
+      <h3 class="aviso-titulo">⚠️ AVISO IMPORTANTE</h3>
+      <p class="aviso-texto">Le quedan <strong>5 minutos</strong> para finalizar su descanso / corte reglamentario.<br><br>Recuerde que el cumplimiento estricto de los tiempos establecidos forma parte de la normativa vigente. El no cumplimiento puede derivar en observaciones y, de corresponder, en la aplicación de medidas correctivas o sanciones según lo establecido por la empresa y la regulación correspondiente.<br><br>Por favor, finalice su descanso en el horario previsto.</p>
+      <button id="cerrarAviso" class="aviso-boton">Entendido</button>
+    </div>
+  </div>
+
+  <footer class="app-footer max-w-2xl mx-auto px-6">© 2026 Appstream AND Doli - El Cerebro | Ventana Choferes</footer>
+
+  <script>
+    const LIMITE_TOLERANCIA_MIN = 5;
+    const TIPO_CORTE_FIJO = "CORTE DE 1 HORA / 60 MIN";
+    const TIEMPO_TOTAL_CORTE = 3600;
+    const TIEMPO_AVISO = 300;
+
+    const socket = io({ reconnection: true, reconnectionDelay: 1000, reconnectionDelayMax: 5000, reconnectionAttempts: Infinity });
+
+    let horaInicioReal = null;
+    let intervaloContador = null;
+    let datosCorteActual = null;
+    let cantidadIngresos = parseInt(localStorage.getItem('cantidadIngresos') || "0");
+    let avisoMostrado = false;
+
+    // 📋 LISTA DE CHOFERES
+    const listaChoferes = {
+      "24799": "GODOY BRUNO",
+      "26523": "AGUILAR EMILIANO",
+      "26244": "CORREA NICOLÁS",
+      "26871": "AGUIRRE JAVIER",
+      "25102": "MARTÍNEZ LUCAS",
+      "27345": "RODRÍGUEZ MATÍAS"
+    };
+
+    // ⏰ HORARIOS POR LEGAJO
+    const horariosPorLegajo = {
+      "26523": "12:00",   // Aguilar Emiliano
+      "24799": "13:00",   // Godoy Bruno
+      "26244": "14:00",   // Correa Nicolás
+      "26871": "15:00"    // Aguirre Javier
+    };
+
+    window.addEventListener('load', () => {
+      const guardadoInicio = localStorage.getItem('horaInicioCorte');
+      const guardadoDatos = localStorage.getItem('datosCorte');
+      if (guardadoInicio && guardadoDatos) {
+        horaInicioReal = parseInt(guardadoInicio);
+        datosCorteActual = JSON.parse(guardadoDatos);
+        avisoMostrado = localStorage.getItem('avisoMostrado') === 'true';
+        iniciarVistaActiva();
+      }
+
+      document.getElementById('inputLegajo').addEventListener('input', () => {
+        const legajo = document.getElementById('inputLegajo').value.trim();
+        document.getElementById('inputNombre').value = listaChoferes[legajo] || "";
+      });
+
+      document.getElementById('cerrarAviso').addEventListener('click', () => {
+        document.getElementById('avisoFinal').style.display = 'none';
+      });
+
+      document.getElementById('btnEnviarDatos').addEventListener('click', () => {
+        const legajo = document.getElementById('inputLegajo').value.trim();
+        const nombre = document.getElementById('inputNombre').value.trim();
+        if (!legajo || !nombre) return mostrarMensaje("⚠️ Ingrese un legajo válido", "error");
+
+        // Obtener hora asignada individual
+        const horaAsignadaChofer = horariosPorLegajo[legajo] || "12:00";
+
+        const horaActual = new Date();
+        const [horaRef, minRef] = horaAsignadaChofer.split(':').map(Number);
+        const horaLimite = new Date();
+        horaLimite.setHours(horaRef, minRef + LIMITE_TOLERANCIA_MIN, 0, 0);
+        let condicion = "INGRESADO";
+        if (horaActual > horaLimite && cantidadIngresos > 0) condicion = "FUERA DE HORARIO";
+        cantidadIngresos++;
+        localStorage.setItem('cantidadIngresos', cantidadIngresos.toString());
+        horaInicioReal = Date.now();
+        avisoMostrado = false;
+
+        // ✅ DATOS CON HORARIO PROPIO DE CADA CHOFER
+        datosCorteActual = {
+          nombre: nombre.toUpperCase(),
+          legajo: legajo,
+          horaAsignada: horaAsignadaChofer,
+          horaIngreso: new Date(horaInicioReal).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'}),
+          condicion: condicion,
+          tipo: TIPO_CORTE_FIJO,
+          motivo: "---"
+        };
+
+        localStorage.setItem('horaInicioCorte', horaInicioReal.toString());
+        localStorage.setItem('datosCorte', JSON.stringify(datosCorteActual));
+        localStorage.setItem('avisoMostrado', 'false');
+        socket.emit('nuevoDescansoActivo', datosCorteActual);
+        iniciarVistaActiva();
+        mostrarMensaje("✅ Corte iniciado correctamente", "ok");
+      });
+
+      socket.on('ordenResetTotal', () => { reiniciarSistema(); localStorage.setItem('cantidadIngresos', "0"); cantidadIngresos = 0; });
+      socket.on('tiempoCumplido', finalizarPorSupervisor);
+      socket.on('reiniciarVista', reiniciarSistema);
+      if (Notification && Notification.permission !== "granted") Notification.requestPermission();
+    });
+
+    socket.on('connect', () => {
+      const estado = document.getElementById('estadoConexion');
+      estado.textContent = "🟢 CONECTADO AL SERVIDOR - LISTO PARA ENVIAR";
+      estado.className = "estado-conexion estado-conectado";
+    });
+    socket.on('disconnect', () => {
+      const estado = document.getElementById('estadoConexion');
+      estado.textContent = "🔴 DESCONECTADO - BUSCANDO RECONEXIÓN...";
+      estado.className = "estado-conexion estado-desconectado";
+    });
+
+    function iniciarVistaActiva() {
+      document.getElementById('seccionFormulario').style.display = 'none';
+      document.getElementById('seccionActivo').style.display = 'block';
+      document.getElementById('datoLegajo').textContent = `Legajo: ${datosCorteActual.legajo}`;
+      document.getElementById('datoNombre').textContent = datosCorteActual.nombre;
+      document.getElementById('datoHoraAsignada').textContent = datosCorteActual.horaAsignada + " hs";
+      document.getElementById('datoHoraIngreso').textContent = datosCorteActual.horaIngreso + " hs";
+      document.getElementById('datoCondicion').textContent = datosCorteActual.condicion;
+      document.getElementById('datoTipoCorte').textContent = datosCorteActual.tipo;
+      if (intervaloContador) clearInterval(intervaloContador);
+      intervaloContador = setInterval(() => {
+        const ahora = Date.now();
+        const transcurrido = Math.floor((ahora - horaInicioReal) / 1000);
+        const restante = Math.max(0, TIEMPO_TOTAL_CORTE - transcurrido);
+        const m = Math.floor(restante / 60).toString().padStart(2, '0');
+        const s = (restante % 60).toString().padStart(2, '0');
+        document.getElementById('contadorActivo').textContent = `${m}:${s}`;
+        document.getElementById('progresoActivo').style.width = `${((TIEMPO_TOTAL_CORTE - restante)/TIEMPO_TOTAL_CORTE)*100}%`;
+        if (restante <= TIEMPO_AVISO && !avisoMostrado) { avisoMostrado = true; localStorage.setItem('avisoMostrado','true'); document.getElementById('avisoFinal').style.display = 'flex'; }
+        if (restante <= 0) { detenerContador(); socket.emit('descansoTerminadoOk', datosCorteActual); reiniciarSistema(); }
+      }, 1000);
+    }
+
+    function detenerContador() { if(intervaloContador) clearInterval(intervaloContador); intervaloContador=null; }
+    function reiniciarSistema() { detenerContador(); horaInicioReal=null; datosCorteActual=null; localStorage.removeItem('horaInicioCorte'); localStorage.removeItem('datosCorte'); localStorage.removeItem('avisoMostrado'); document.getElementById('seccionFormulario').style.display='block'; document.getElementById('seccionActivo').style.display='none'; document.getElementById('inputLegajo').value=''; document.getElementById('inputNombre').value=''; }
+    function finalizarPorSupervisor() { detenerContador(); if(datosCorteActual) socket.emit('descansoTerminadoOk', datosCorteActual); reiniciarSistema(); }
+    function mostrarMensaje(texto, tipo) { const div=document.getElementById('mensajeAccion'); div.style.display='block'; div.textContent=texto; div.className=`mensaje-accion ${tipo==='error'?'bg-red-100 text-red-700 border border-red-200':'mensaje-info'}`; setTimeout(()=>div.style.display='none',4000); }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

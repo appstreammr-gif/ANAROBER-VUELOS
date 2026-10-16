@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CMD Opera - Consulta</title>
+<script src="config.js"></script>
+<script>
+let ENLACE_BASE = "";
+function actualizarDireccion() {
+  if (typeof DIRECCION_BASE !== 'undefined') {
+    ENLACE_BASE = DIRECCION_BASE;
+  }
+}
+actualizarDireccion();
+</script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; width:100%; }
+.pantalla-login {
+  position: fixed; top:0; left:0;
+  width:100%; height:100%;
+  background:#000080;
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999; padding:15px;
+}
+.cuadro-login {
+  border:2px solid #FFFFFF; padding:30px 20px;
+  background:#0000A0; box-shadow:0 0 25px rgba(255,255,255,0.35);
+  font-family:'Consolas','Courier New',monospace; color:#FFFFFF;
+  width:100%; max-width:360px;
+}
+.cuadro-login h2 {
+  text-align:center; margin-bottom:25px; color:#FFFF00;
+  border-bottom:1px solid #FFFFFF; padding-bottom:10px; font-size:18px;
+}
+.cuadro-login label { display:block; margin:12px 0 4px 0; color:#AAAAFF; font-size:15px; }
+.cuadro-login input {
+  width:100%; padding:10px; background:#000060;
+  border:1px solid #FFFFFF; color:#FFFFFF;
+  font-family:inherit; font-size:16px; outline:none;
+}
+.cuadro-login button {
+  width:100%; margin-top:20px; padding:12px;
+  background:#0000C0; border:1px solid #FFFFFF;
+  color:#FFFFFF; font-family:inherit;
+  font-size:16px; font-weight:bold; cursor:pointer;
+}
+.cuadro-login button:hover { background:#0000E0; }
+.error-login {
+  color:#FF6666; margin-top:12px; text-align:center;
+  display:none; font-size:14px;
+}
+.oculto { display:none !important; }
+body {
+  background:#000080; color:#FFFFFF;
+  font-family:'Consolas','Courier New',monospace;
+  font-size:17px; line-height:1.6;
+  padding:8px; display:flex; flex-direction:column;
+  height:100vh; height:100dvh; margin:0;
+}
+.cabecera {
+  width:100%; text-align:left;
+  margin-bottom:8px; padding-bottom:8px;
+  border-bottom:2px solid #8888FF; flex-shrink:0;
+  font-weight:bold; color:#FFFF00; font-size:clamp(15px,3vw,17px);
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+}
+.cabecera .titulo-principal { color:#FFFF00; }
+.cabecera .fecha-sistema { color:#AAAAFF; font-size:clamp(13px,2.5vw,15px); margin-left:auto; }
+.fila-aeronave {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  width: 100%;
+  background: #000090;
+  border: 2px solid #00FFFF;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 8px 0;
+  align-items: flex-start;
+}
+.columna-foto-avion {
+  width: 260px;
+  flex-shrink: 0;
+}
+.foto-chica {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 2px solid #00FFFF;
+}
+.datos-aeronave {
+  width: 180px;
+  flex-shrink: 0;
+  color: #FFFFFF;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 16px;
+  line-height: 2;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+.dato-linea {
+  font-size: 17px;
+}
+.dato-etiqueta { color:#00FFFF; font-weight:bold; }
+.dato-valor { color:#FFFFFF; font-weight:bold; }
+.columna-manual {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.imagen-manual {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  border-radius: 6px;
+  border: 2px solid #00FFFF;
+}
+.contenedor-principal {
+  display:flex; flex-direction:row; gap:10px; flex:1;
+  min-height:0; margin-bottom:8px;
+}
+.historial {
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  white-space:pre; word-wrap:normal;
+  padding:12px 15px; border:1px solid #4444FF; border-radius:4px;
+  background:#000090; text-align:left;
+  font-size:clamp(15px,2.8vw,17px); line-height:1.6;
+}
+.leyenda {
+  width:220px; flex-shrink:0;
+  border:1px solid #6666FF; border-radius:4px;
+  background:#0000A0; padding:12px 10px;
+  font-size:clamp(12px,2.2vw,14px); line-height:1.6;
+}
+.leyenda-titulo {
+  color:#FFFF00; font-weight:bold; text-align:center;
+  margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #6666FF;
+}
+.leyenda-item { margin:4px 0; display:flex; align-items:center; gap:6px; }
+.leyenda-color-encargado { color:#FFCC00; font-weight:bold; }
+.leyenda-color-horario { color:#99FF99; font-weight:bold; }
+.leyenda-color-posicion { color:#88FFFF; font-weight:bold; }
+.leyenda-color-comentario { color:#FFCCFF; font-weight:bold; }
+.leyenda-separador { border-bottom:1px dashed #4444FF; margin:8px 0; }
+.leyenda-ayuda { color:#AAAAFF; font-size:clamp(11px,2vw,13px); margin-top:6px; }
+.linea-comando {
+  width:100%; display:flex; align-items:center; gap:6px;
+  flex-shrink:0; padding:10px 12px;
+  border:1px solid #8888FF; border-radius:4px; background:#0000A0;
+}
+.prompt { font-weight:bold; white-space:nowrap; color:#FFFF00; font-size:clamp(15px,2.8vw,17px); }
+#entrada { flex:1; background:transparent; border:none; outline:none; color:#FFFFFF; font:inherit; width:100%; font-size:clamp(15px,2.8vw,17px); }
+.etiqueta-encargado { color:#FFCC00; font-weight:bold; }
+.etiqueta-horario { color:#99FF99; font-weight:bold; }
+.etiqueta-posicion { color:#88FFFF; font-weight:bold; }
+.etiqueta-comentario { color:#FFCCFF; font-weight:bold; }
+.etiqueta-matricula { color:#00FFFF; font-weight:bold; }
+@media (max-width: 768px) {
+  .contenedor-principal { flex-direction:column; }
+  .leyenda { width:100%; }
+  .fila-aeronave { flex-direction:column; }
+  .columna-foto-avion { width:100%; }
+  .foto-chica { max-width: 260px; }
+  .datos-aeronave { width:100%; }
+  .cabecera { flex-direction:column; align-items:flex-start; }
+  .cabecera .fecha-sistema { margin-left:0; }
+}
+</style>
+</head>
+<body>
+<div class="pantalla-login" id="pantallaLogin">
+  <div class="cuadro-login">
+    <h2>🔐 INGRESO AL SISTEMA</h2>
+    <label>USUARIO:</label>
+    <input type="text" id="usuario" autocomplete="off" placeholder="Escriba usuario..." value="ANAROBER">
+    <label>CONTRASEÑA:</label>
+    <input type="password" id="contraseña" placeholder="Escriba contraseña...">
+    <button id="btnIngresar">✅ INGRESAR</button>
+    <div class="error-login" id="errorLogin">❌ USUARIO O CONTRASEÑA INCORRECTOS</div>
+  </div>
+</div>
+<div id="contenidoConsola" class="oculto">
+  <div class="cabecera">
+    <span class="titulo-principal">=== CMD OPERA - CONSULTA RÁPIDA ===  Versión 4.1 | Appstream</span>
+    <span class="fecha-sistema">📅 Fecha: <span id="fechaHoy"></span></span>
+  </div>
+  <div id="filaAeronave" class="fila-aeronave" style="display:none;">
+    <div class="columna-foto-avion">
+      <img id="fotoChica" class="foto-chica" alt="Avión" onerror="this.style.display='none'">
+    </div>
+    <div class="datos-aeronave" id="datosAeronave"></div>
+    <div class="columna-manual">
+      <img id="imagenManual" class="imagen-manual" alt="Datos del Avión" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <div class="contenedor-principal">
+    <div class="historial" id="historial">Escriba AYUDA para ver cómo consultar
+----------------------------------------</div>
+    <div class="leyenda">
+      <div class="leyenda-titulo">📖 LEYENDA DE COLORES</div>
+      <div class="leyenda-item"><span class="leyenda-color-encargado">●</span> Encargado</div>
+      <div class="leyenda-item"><span class="leyenda-color-horario">●</span> Horarios Subida/Bajada</div>
+      <div class="leyenda-item"><span class="leyenda-color-posicion">●</span> Posición</div>
+      <div class="leyenda-item"><span class="leyenda-color-comentario">●</span> Comentarios</div>
+      <div class="leyenda-separador"></div>
+      <div class="leyenda-ayuda">
+        💡 <b>COMANDOS:</b><br>
+        Fecha sola → 05-09-2026<br>
+        Fecha + Matrícula → 05-09-2026 CMA<br>
+        Rango fechas → 01-09-2026 05-09-2026<br>
+        LIMPIAR → Borra pantalla y foto<br>
+      </div>
+    </div>
+  </div>
+  <div class="linea-comando"><span class="prompt">C:\APPSTREAM></span><input type="text" id="entrada" autofocus placeholder="Escriba una fecha y presione ENTER..."></div>
+</div>
+<script>
+const USUARIO_CORRECTO = 'ANAROBER';
+const CONTRASEÑA_CORRECTA = 'DOITFOR.R';
+let socket = null;
+function conectarSocket() {
+  if (typeof io === 'undefined') {
+    setTimeout(conectarSocket, 100);
+    return;
+  }
+  socket = io(ENLACE_BASE, { transports: ['websocket', 'polling'] });
+  
+  socket.on('respuesta_consola', (texto) => {
+    const coloreado = colorearRespuesta(texto);
+    historial.innerHTML += coloreado;
+    historial.scrollTop = historial.scrollHeight;
+  });
+}
+const AERONAVES = {
+  'LV-CDY': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER_MANUAL.PNG' },
+  'LV-CDZ': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'LV-CPJ': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'LV-CMA': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'CKZ':    { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'LV-CKZ': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'CPI':    { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'LV-CPI': { modelo:'Embraer E190', pax:96, galley:2, banos:2, foto:'/imagenes/EMBRAER190.PNG', manual:'/imagenes/EMBRAER190.PNG' },
+  'LV-GOO': { modelo:'Boeing 737-700', pax:128, galley:1, banos:2, foto:null, manual:null },
+  'LVHKW':  { modelo:'Boeing 737-800', pax:170, galley:1, banos:2, foto:null, manual:null },
+  'LV-HKW': { modelo:'Boeing 737-800', pax:170, galley:1, banos:2, foto:null, manual:null },
+  'LV-KKD': { modelo:'Boeing 737 MAX 8', pax:170, galley:1, banos:2, foto:null, manual:null }
+};
+const pantallaLogin = document.getElementById('pantallaLogin');
+const contenidoConsola = document.getElementById('contenidoConsola');
+const filaAeronave = document.getElementById('filaAeronave');
+const datosAeronave = document.getElementById('datosAeronave');
+const fotoChica = document.getElementById('fotoChica');
+const imagenManual = document.getElementById('imagenManual');
+const usuario = document.getElementById('usuario');
+const contraseña = document.getElementById('contraseña');
+const btnIngresar = document.getElementById('btnIngresar');
+const errorLogin = document.getElementById('errorLogin');
+const fechaHoy = document.getElementById('fechaHoy');
+const entrada = document.getElementById('entrada');
+const historial = document.getElementById('historial');
+function obtenerFechaHoyFormatoConsulta() {
+  const ahora = new Date(Date.now() - 3 * 3600000);
+  const dia = String(ahora.getDate()).padStart(2, '0');
+  const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+  const anio = ahora.getFullYear();
+  return `${dia}-${mes}-${anio} ${ahora.toLocaleTimeString('es-AR')}`;
+}
+function intentarIngreso() {
+  const u = usuario.value.trim().toUpperCase();
+  const c = contraseña.value.trim();
+  if (u === USUARIO_CORRECTO && c === CONTRASEÑA_CORRECTA) {
+    pantallaLogin.classList.add('oculto');
+    contenidoConsola.classList.remove('oculto');
+    fechaHoy.textContent = obtenerFechaHoyFormatoConsulta();
+    setTimeout(() => entrada.focus(), 100);
+  } else {
+    errorLogin.style.display = 'block';
+    contraseña.value = '';
+    contraseña.focus();
+  }
+}
+btnIngresar.addEventListener('click', intentarIngreso);
+contraseña.addEventListener('keydown', e => { if(e.key==='Enter') intentarIngreso(); });
+usuario.addEventListener('keydown', e => { if(e.key==='Enter') contraseña.focus(); });
+function mostrarTodo(datos) {
+  datosAeronave.innerHTML = `
+    <div class="dato-linea"><span class="dato-etiqueta">¥ MODELO:</span> <span class="dato-valor">${datos.modelo}</span></div>
+    <div class="dato-linea"><span class="dato-etiqueta">¥ PAX:</span> <span class="dato-valor">${datos.pax}</span></div>
+    <div class="dato-linea"><span class="dato-etiqueta">¥ GALLEY:</span> <span class="dato-valor">${datos.galley}</span></div>
+    <div class="dato-linea"><span class="dato-etiqueta">¥ BAÑOS:</span> <span class="dato-valor">${datos.banos}</span></div>
+  `;
+  if (datos.foto) fotoChica.src = ENLACE_BASE + datos.foto;
+  if (datos.manual) imagenManual.src = ENLACE_BASE + datos.manual;
+  filaAeronave.style.display = 'flex';
+}
+function ocultarAeronave() {
+  filaAeronave.style.display = 'none';
+  fotoChica.src = '';
+  imagenManual.src = '';
+  datosAeronave.innerHTML = '';
+}
+
+// ✅ COLOREAR — AHORA MUESTRA TODO SIN OCULTAR NADA
+function colorearRespuesta(texto) {
+  let html = '';
+  let matriculaEncontrada = null;
+  let datosAvionEncontrado = null;
+  const lineas = texto.split('\n');
+  
+  for (let linea of lineas) {
+    let lineaColoreada = linea;
+    
+    // Cambiar encabezados
+    if (/--- VUELO 1 ---/i.test(linea)) {
+      lineaColoreada = linea.replace(/--- VUELO 1 ---/i, '--- SALIDA ---');
+    }
+    if (/--- VUELO 2 ---/i.test(linea)) {
+      lineaColoreada = linea.replace(/--- VUELO 2 ---/i, '--- ARRIBO ---');
+    }
+    
+    // Matrícula
+    const matMatch = linea.toUpperCase().match(/MATRÍCULA:\s*([A-Z0-9\-]+)/i);
+    if (matMatch) {
+      matriculaEncontrada = matMatch[1].trim();
+      lineaColoreada = linea.replace(/(Matrícula:.*)/i, '<span class="etiqueta-matricula">$1</span>');
+    }
+    
+    // ✅ COLOREAR TODO — SIN OCULTAR NINGUNA LÍNEA
+    lineaColoreada = lineaColoreada.replace(/(Encargado:|Encargado asignado:|Asignado a:)(.*)/gi, '<span class="etiqueta-encargado">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Hora Salida:|Horario Salida:)(.*)/gi, '<span class="etiqueta-horario">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Hora Subida:)(.*)/gi, '<span class="etiqueta-horario">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Hora Bajada:)(.*)/gi, '<span class="etiqueta-horario">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Hora Arribo:)(.*)/gi, '<span class="etiqueta-horario">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Posición:)(.*)/gi, '<span class="etiqueta-posicion">$1</span>$2');
+    lineaColoreada = lineaColoreada.replace(/(Comentario:|IMP:)(.*)/gi, '<span class="etiqueta-comentario">$1</span>$2');
+    
+    html += lineaColoreada + '<br>';
+  }
+  
+  if (matriculaEncontrada) {
+    datosAvionEncontrado = AERONAVES[matriculaEncontrada.toUpperCase()];
+    if (!datosAvionEncontrado) {
+      const sinGuion = matriculaEncontrada.replace(/-/g, '');
+      datosAvionEncontrado = AERONAVES[sinGuion.toUpperCase()];
+    }
+    if (datosAvionEncontrado) {
+      mostrarTodo(datosAvionEncontrado);
+    } else {
+      ocultarAeronave();
+    }
+  } else {
+    ocultarAeronave();
+  }
+  return html;
+}
+
+entrada.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const texto = entrada.value.trim();
+    if (!texto) return;
+    if (texto.toUpperCase() === 'LIMPIAR') {
+      ocultarAeronave();
+      historial.innerHTML = 'C:\\APPSTREAM&gt; Consola limpiada.<br>Escriba AYUDA para ver cómo consultar<br>----------------------------------------<br>';
+      entrada.value = '';
+      return;
+    }
+    historial.innerHTML += `<span style="color:#FFFF00">C:\\APPSTREAM&gt; ${texto}</span><br>`;
+    if (texto.toUpperCase() === 'AYUDA') {
+      historial.innerHTML += `
+<br>
+📋 <b>COMANDOS DISPONIBLES:</b><br>
+   Fecha sola → 05-09-2026<br>
+   Fecha + Matrícula → 05-09-2026 CMA<br>
+   Rango fechas → 01-09-2026 05-09-2026<br>
+   LIMPIAR → Borra pantalla y foto<br>
+<br>`;
+      entrada.value = '';
+      return;
+    }
+    if (socket) socket.emit('consulta_fecha', texto);
+    entrada.value = '';
+  }
+});
+conectarSocket();
+</script>
+</body>
+</html>

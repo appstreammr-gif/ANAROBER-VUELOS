@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upstream | Carga de Vuelos - Appstream 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0057B8',
+                        secondary: '#0091EA',
+                        dark: '#0F172A',
+                        grupo1: '#3B82F6',
+                        grupo2: '#10B981',
+                        grupo3: '#F59E0B',
+                        grupo4: '#8B5CF6',
+                        grupo5: '#EF4444'
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .shadow-up { box-shadow: 0 10px 25px -5px rgba(0, 87, 184, 0.12); }
+        .input-focus { @apply focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all; }
+        .grupo-tag { @apply px-3 py-1 rounded-full text-xs font-medium text-white; }
+    </style>
+</head>
+<body class="bg-slate-50 font-inter text-slate-700">
+
+    <header class="bg-gradient-to-r from-primary to-secondary text-white py-5 px-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa fa-plane fa-2x"></i>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold">UPSTREAM</h1>
+                    <p class="text-sm text-blue-100">Carga y Asignación de Vuelos • 2026</p>
+                </div>
+            </div>
+            <a href="ventana_matriculas.html" class="inline-block text-white hover:text-white/80 bg-white/20 px-3 py-1 rounded-lg text-sm">
+                📋 Ver Lista Completa
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+
+        <section class="bg-white rounded-2xl shadow-up p-6 mb-8">
+            <h2 class="text-xl font-semibold text-dark mb-6 flex items-center gap-2">
+                <i class="fa fa-plus-circle text-primary"></i> Cargar Nuevo Vuelo
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Matrícula</label>
+                    <input type="text" id="matricula" placeholder="Ej: LV-ABC" 
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl input-focus text-lg uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Número de Vuelo</label>
+                    <input type="text" id="nroVuelo" placeholder="Ej: AR1234" 
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl input-focus text-lg uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Posición / Ubicación</label>
+                    <input type="text" id="posicion" placeholder="Ej: Plataforma 2" 
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl input-focus">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">Asignar a Grupo</label>
+                    <select id="grupo" class="w-full px-4 py-3 border border-slate-200 rounded-xl input-focus bg-white">
+                        <option value="">-- Sin asignar --</option>
+                        <option value="1">Grupo 1</option>
+                        <option value="2">Grupo 2</option>
+                        <option value="3">Grupo 3</option>
+                        <option value="4">Grupo 4</option>
+                        <option value="5">Grupo 5</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="btnCargar" class="w-full md:w-auto bg-primary hover:bg-primary/90 text-white font-medium px-8 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                <i class="fa fa-save"></i> Guardar Vuelo
+            </button>
+        </section>
+
+        <section class="bg-white rounded-2xl shadow-up p-6">
+            <h2 class="text-xl font-semibold text-dark mb-5 flex items-center gap-2">
+                <i class="fa fa-table text-primary"></i> Vuelos Ingresados
+                <span id="totalGeneral" class="ml-auto text-sm font-normal text-slate-500">Total: 0</span>
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600">
+                            <th class="px-4 py-3 text-left">Matrícula</th>
+                            <th class="px-4 py-3 text-left">N° de Vuelo</th>
+                            <th class="px-4 py-3 text-left">Posición</th>
+                            <th class="px-4 py-3 text-left">Grupo Asignado</th>
+                            <th class="px-4 py-3 text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCargados" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-10 py-4 text-center text-slate-500 text-sm border-t border-slate-200">
+        © 2026 Appstream Sistemas • Gestión Operativa
+    </footer>
+
+    <script>
+        const socket = io();
+        let listaVuelos = [];
+        const coloresGrupo = {1:'bg-grupo1',2:'bg-grupo2',3:'bg-grupo3',4:'bg-grupo4',5:'bg-grupo5'};
+
+        const matriculaInput = document.getElementById('matricula');
+        const nroVueloInput = document.getElementById('nroVuelo');
+        const posicionInput = document.getElementById('posicion');
+        const grupoInput = document.getElementById('grupo');
+        const btnCargar = document.getElementById('btnCargar');
+        const tabla = document.getElementById('tablaCargados');
+        const totalGeneral = document.getElementById('totalGeneral');
+
+        // Recibir lista actualizada desde el servidor
+        socket.on('listaVuelosActualizada', (datos) => {
+            listaVuelos = datos;
+            actualizarVista();
+        });
+
+        function actualizarVista() {
+            tabla.innerHTML = '';
+            if (listaVuelos.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400 italic">No hay vuelos cargados todavía.</td></tr>`;
+                totalGeneral.textContent = 'Total: 0';
+                return;
+            }
+
+            listaVuelos.forEach((vuelo, index) => {
+                const fila = document.createElement('tr');
+                fila.className = 'hover:bg-slate-50 transition-colors';
+                fila.innerHTML = `
+                    <td class="px-4 py-4 font-semibold text-primary">${vuelo.matricula}</td>
+                    <td class="px-4 py-4 font-medium">${vuelo.nroVuelo}</td>
+                    <td class="px-4 py-4">${vuelo.posicion}</td>
+                    <td class="px-4 py-4">
+                        <select onchange="cambiarGrupo(${index}, this.value)" class="px-2 py-1 border rounded input-focus">
+                            <option value="" ${!vuelo.grupo?'selected':''}>-- Sin asignar --</option>
+                            <option value="1" ${vuelo.grupo=='1'?'selected':''}>Grupo 1</option>
+                            <option value="2" ${vuelo.grupo=='2'?'selected':''}>Grupo 2</option>
+                            <option value="3" ${vuelo.grupo=='3'?'selected':''}>Grupo 3</option>
+                            <option value="4" ${vuelo.grupo=='4'?'selected':''}>Grupo 4</option>
+                            <option value="5" ${vuelo.grupo=='5'?'selected':''}>Grupo 5</option>
+                        </select>
+                        ${vuelo.grupo ? `<span class="grupo-tag ${coloresGrupo[vuelo.grupo]} ml-2">Grupo ${vuelo.grupo}</span>` : ''}
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <button onclick="eliminar(${index})" class="text-red-500 hover:text-red-700" title="Eliminar">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tabla.appendChild(fila);
+            });
+            totalGeneral.textContent = `Total: ${listaVuelos.length}`;
+        }
+
+        btnCargar.addEventListener('click', () => {
+            const matricula = matriculaInput.value.trim().toUpperCase();
+            const nroVuelo = nroVueloInput.value.trim().toUpperCase();
+            const posicion = posicionInput.value.trim();
+            const grupo = grupoInput.value;
+
+            if (!matricula || !nroVuelo || !posicion) {
+                alert("⚠️ Completá todos los campos");
+                return;
+            }
+
+            socket.emit('nuevoVuelo', { matricula, nroVuelo, posicion, grupo: grupo || null });
+            matriculaInput.value = nroVueloInput.value = posicionInput.value = grupoInput.value = '';
+            matriculaInput.focus();
+        });
+
+        function cambiarGrupo(indice, nuevoGrupo) {
+            socket.emit('cambiarGrupo', { indice, nuevoGrupo });
+        }
+
+        function eliminar(indice) {
+            if (confirm("¿Eliminar este vuelo?")) socket.emit('eliminarVuelo', indice);
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

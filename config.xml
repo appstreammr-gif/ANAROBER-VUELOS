@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.doli.aeroparque" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>DOLI - AEROPARQUE</name>
+    <description>AppStream 2026 — Carga y Asignación de Vuelos</description>
+    <author email="doli@appstream.com.ar">DOLI</author>
+
+    <!-- ✅ CONEXIÓN AL SERVIDOR CLOUD (sin ngrok) -->
+    <access origin="*" />
+    <access origin="https://thunder-bangkok-tackle-birthday.trycloudflare.com" />
+    
+    <allow-intent href="*" />
+    <allow-navigation href="*" />
+    <allow-navigation href="https://thunder-bangkok-tackle-birthday.trycloudflare.com/*" />
+
+    <!-- ✅ PERMISOS DE CONEXIÓN -->
+    <preference name="AndroidInsecureFileModeEnabled" value="true" />
+    <preference name="Scheme" value="https" />
+    
+    <!-- ✅ PANTALLA COMPLETA SIN BARRAS -->
+    <preference name="Fullscreen" value="true" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="StatusBarOverlaysWebView" value="false" />
+    <preference name="StatusBarBackgroundColor" value="#0066CC" />
+    
+    <!-- ✅ PERMISOS DEL SISTEMA -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+</widget>

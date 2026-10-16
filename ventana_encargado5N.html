@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>ENCARGADO 5 N — MIS VUELOS ASIGNADOS</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; font-family:'Segoe UI',Arial,sans-serif; background:#FFFFFF; color:#000000; font-size:15px; }
+.contenedor-todo { width:100%; max-width:1000px; margin:0 auto; padding:12px 6px; }
+.cabecera { font-size:24px; font-weight:bold; border-bottom:1px solid #666; padding-bottom:10px; margin-bottom:12px; text-align:center; }
+.estado-conexion { padding:8px 12px; margin-bottom:10px; background:#EEF7FF; border-radius:4px; color:#004488; text-align:center; font-size:16px; }
+.aviso { padding:8px 12px; margin-bottom:10px; background:#F8F9FA; border:1px solid #E9ECEF; border-radius:4px; text-align:center; font-size:16px; }
+.aviso-alerta { padding:10px 12px; margin-bottom:12px; background:#FFEBEE; border:1px solid #D32F2F; border-radius:4px; color:#D32F2F; font-weight:bold; text-align:center; font-size:16px; display:none; }
+table { width:100%; border-collapse:separate; border-spacing:4px; margin-bottom:15px; table-layout:fixed; }
+th { border:none; border-bottom:1px solid #666; padding:10px 6px; text-align:center; font-weight:normal; font-size:14px; }
+th:nth-child(1) { width:14%; }
+th:nth-child(2) { width:14%; }
+th:nth-child(3) { width:14%; }
+th:nth-child(4) { width:14%; }
+th:nth-child(5) { width:24%; } /* Más espacio para COMENTARIO */
+th:nth-child(6) { width:20%; } /* Espacio justo para ESTADO */
+td { border:none; border-bottom:1px solid #DDD; padding:10px 6px; text-align:center; font-size:14px; word-break:break-word; }
+.matricula-vuelo { font-size:12px; color:#444; margin-top:4px; display:block; }
+.fila-pendiente { cursor:pointer; }
+.fila-pendiente:hover { background:#F8F9FA; }
+.fila-cerrada { color:#444; background:#FAFAFA; }
+.fila-alerta { background:#FFEBEE !important; }
+.estado-cerrado { color:#006633; font-weight:bold; }
+.estado-pendiente { color:#CC6600; font-weight:bold; }
+.etiqueta-demora { color:#D32F2F; font-weight:bold; font-size:12px; margin-top:4px; display:block; }
+.botones { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+button { padding:8px 14px; font-size:15px; border:1px solid #888; border-radius:4px; cursor:pointer; }
+.btn-guardar { background:#E8F5E9; border-color:#2E7D32; color:#1B5E20; }
+.btn-cancelar { background:#FFF3E0; border-color:#E65100; color:#E65100; }
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.25); display:none; align-items:center; justify-content:center; padding:15px; }
+.modal-contenido { background:white; border:1px solid #999; border-radius:6px; padding:20px; width:100%; max-width:480px; }
+.modal-contenido h4 { margin-bottom:10px; font-size:17px; text-align:center; }
+.datos-vuelo-modal { padding:8px; margin-bottom:15px; background:#F5F5F5; border-radius:4px; text-align:center; font-size:14px; }
+.aviso-limite { padding:10px; margin-bottom:15px; background:#FFF9E6; border:1px solid #FFCC00; border-radius:4px; color:#996600; font-weight:500; text-align:center; }
+.campo { margin-bottom:12px; }
+label { display:block; margin-bottom:4px; font-weight:500; }
+input, textarea { width:100%; padding:7px; border:1px solid #999; border-radius:4px; font-size:15px; }
+textarea { min-height:80px; resize:vertical; }
+</style>
+</head>
+<body>
+<div class="contenedor-todo">
+<div class="cabecera">✈️ ENCARGADO 5 N — MIS VUELOS ASIGNADOS</div>
+<div class="estado-conexion" id="estado">✅ Conectado — trayendo tus vuelos...</div>
+<div class="aviso">✅ Al abrir esta ventana se cargan automáticamente todos los vuelos que te asignó el Supervisor</div>
+<div class="aviso-alerta" id="alertaGeneral">⚠️ HAY VUELOS CERRADOS FUERA DE HORARIO — POSIBLE DEMORA</div>
+<table>
+  <thead><tr><th>N°<br>VUELO</th><th>HORA<br>SALIDA</th><th>HORA<br>SUBIDA</th><th>HORA<br>BAJADA</th><th>COMENTARIO</th><th>ESTADO</th></tr></thead>
+  <tbody id="cuerpoTabla"></tbody>
+</table>
+</div>
+<div class="modal" id="formularioCarga">
+  <div class="modal-contenido">
+    <h4>Completar datos del vuelo</h4>
+    <div class="datos-vuelo-modal" id="datosVueloModal"></div>
+    <div class="aviso-limite" id="avisoLimite"></div>
+    <input type="hidden" id="vueloSeleccionado">
+    <div class="campo"><label>Hora de Subida:</label><input type="time" id="horaSubida"></div>
+    <div class="campo"><label>Hora de Bajada:</label><input type="time" id="horaBajada"></div>
+    <div class="campo"><label>Comentario / Observación:</label><textarea id="comentario"></textarea></div>
+    <div class="botones"><button class="btn-guardar" onclick="guardarYCerrar()">✅ Guardar y cerrar vuelo</button><button class="btn-cancelar" onclick="cerrarFormulario()">❌ Cancelar</button></div>
+  </div>
+</div>
+<script>
+const MI_NUMERO = '5 N';
+const socket = io({ reconnection:true, reconnectionDelay:500 });
+let listaMisVuelos = []; let vueloActual = null;
+socket.on('connect', () => { document.getElementById('estado').innerHTML = '✅ Conectado — trayendo tus vuelos...'; socket.emit('pedirTodosMisVuelos', MI_NUMERO); });
+socket.on('asignacionVuelos', datos => { if(!datos.vuelos) return; listaMisVuelos = datos.vuelos.filter(v => Number(v.encargadoAsignado) === Number(MI_NUMERO)); dibujarTodo(); });
+setInterval(() => { if(socket.connected) socket.emit('pedirTodosMisVuelos', MI_NUMERO); }, 3000);
+socket.on('registrarVuelo', () => socket.emit('pedirTodosMisVuelos', MI_NUMERO));
+socket.on('limpiarDespuesInforme', () => { listaMisVuelos = []; dibujarTodo(); });
+function calcularLimite(horaSalida) { if (!horaSalida || !horaSalida.includes(':')) return null; const [h, m] = horaSalida.split(':').map(Number); let totalMin = h * 60 + m - 30; if (totalMin < 0) totalMin += 24 * 60; const hLim = Math.floor(totalMin / 60).toString().padStart(2, '0'); const mLim = (totalMin % 60).toString().padStart(2, '0'); return `${hLim}:${mLim}`; }
+function fueraDeHorario(horaSalida, horaBajada) { if (!horaSalida || !horaBajada) return false; const limite = calcularLimite(horaSalida); if (!limite) return false; const [hLim, mLim] = limite.split(':').map(Number); const [hBaj, mBaj] = horaBajada.split(':').map(Number); return (hBaj*60 + mBaj) > (hLim*60 + mLim); }
+function dibujarTodo() {
+  const cuerpo = document.getElementById('cuerpoTabla'); cuerpo.innerHTML = ''; let hayAlertas = false;
+  if(listaMisVuelos.length === 0) { cuerpo.innerHTML = `<tr><td colspan="6" style="padding:25px; color:#666;">No tenés vuelos asignados todavía</td></tr>`; document.getElementById('alertaGeneral').style.display = 'none'; return; }
+  listaMisVuelos.forEach(v => {
+    const fila = document.createElement('tr'); const alerta = v.cerrado && fueraDeHorario(v.horaSalida, v.horaBajada); if (alerta) hayAlertas = true;
+    fila.className = v.cerrado ? (alerta ? 'fila-cerrada fila-alerta' : 'fila-cerrada') : 'fila-pendiente'; if(!v.cerrado) fila.onclick = () => abrirFormulario(v);
+    const textoMatricula = v.matricula ? `<span class="matricula-vuelo">✈️ ${v.matricula}</span>` : '';
+    fila.innerHTML = `<td><strong>${v.nroVuelo}</strong>${textoMatricula}</td><td>${v.horaSalida}</td><td>${v.horaSubida || '—'}</td><td>${v.horaBajada || '—'}</td><td>${v.comentario || 'Sin observaciones'}</td><td class="${v.cerrado ? 'estado-cerrado' : 'estado-pendiente'}">${v.cerrado ? '✅ CERRADO' : '⏳ PENDIENTE'}${alerta ? '<span class="etiqueta-demora">⚠️ POSIBLE DEMORA</span>' : ''}</td>`;
+    cuerpo.appendChild(fila);
+  });
+  document.getElementById('alertaGeneral').style.display = hayAlertas ? 'block' : 'none';
+}
+function abrirFormulario(vuelo) {
+  vueloActual = vuelo; document.getElementById('vueloSeleccionado').value = JSON.stringify(vuelo);
+  document.getElementById('horaSubida').value = vuelo.horaSubida || ''; document.getElementById('horaBajada').value = vuelo.horaBajada || ''; document.getElementById('comentario').value = vuelo.comentario || '';
+  const textoMatricula = vuelo.matricula ? ` | Matrícula: ${vuelo.matricula}` : '';
+  document.getElementById('datosVueloModal').innerHTML = `<strong>Vuelo N° ${vuelo.nroVuelo}</strong> ${textoMatricula}<br>Salida: ${vuelo.horaSalida}`;
+  const limite = calcularLimite(vuelo.horaSalida);
+  document.getElementById('avisoLimite').innerHTML = limite ? `ℹ️ HORARIO LÍMITE RECOMENDADO: <strong>${limite}</strong> (30 min antes de salida)` : `⚠️ No se pudo calcular el horario límite`;
+  document.getElementById('formularioCarga').style.display = 'flex';
+}
+function cerrarFormulario() { document.getElementById('formularioCarga').style.display = 'none'; vueloActual = null; }
+function guardarYCerrar() {
+  if (!vueloActual) return;
+  const datosVuelo = {...vueloActual};
+  datosVuelo.horaSubida = document.getElementById('horaSubida').value; datosVuelo.horaBajada = document.getElementById('horaBajada').value;
+  datosVuelo.comentario = document.getElementById('comentario').value.trim(); datosVuelo.cerrado = true;
+  socket.emit('registrarVuelo', { encargado: MI_NUMERO, vuelo: datosVuelo });
+  cerrarFormulario();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>SUPERVISOR - GESTIÓN DE VUELOS</title>
+<script src="https://fanning-canned-nutcase.ngrok-free.dev/socket.io/socket.io.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+body {
+  background: #000000; color: #9E9E9E; padding: 16px;
+  max-width: 100%; margin: 0 auto; min-height: 100vh;
+}
+h1 { text-align: center; color: #FFCC00; margin-bottom: 20px; font-size: 1.4rem; }
+.barra-superior {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 15px; flex-wrap: wrap; gap: 10px;
+}
+.btn {
+  padding: 10px 18px; border: none; border-radius: 6px; font-weight: bold;
+  cursor: pointer; font-size: 14px; transition: all 0.2s;
+}
+.btn-informe { background: #2E7D32; color: #fff; }
+.btn-informe:hover { background: #388E3C; }
+.estado-conexion { font-size: 13px; color: #666; }
+.tabla-contenedor { overflow-x: auto; border-radius: 8px; border: 1px solid #333; }
+table { width: 100%; border-collapse: collapse; background: #111; }
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #222; font-size: 13px; }
+th { background: #1a1a1a; color: #FFCC00; font-weight: bold; white-space: nowrap; }
+tr:hover { background: #1a1a1a; }
+.sin-vuelos { text-align: center; padding: 40px; color: #666; font-size: 1.1rem; }
+.encargado-1 { color: #4CAF50; font-weight: bold; }
+.encargado-2 { color: #2196F3; font-weight: bold; }
+.cerrado { color: #666; text-decoration: line-through; }
+.etiqueta-cerrado { color: #4CAF50; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>📊 SUPERVISOR — GESTIÓN DE VUELOS</h1>
+
+<div class="barra-superior">
+  <div>
+    <button class="btn btn-informe" id="btnLimpiar">📄 Generar Informe y Limpiar Todo</button>
+  </div>
+  <div class="estado-conexion" id="estadoConexion">🔌 Desconectado</div>
+</div>
+
+<div class="tabla-contenedor">
+  <table id="tablaVuelos">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Vuelo</th>
+        <th>Matrícula</th>
+        <th>Posición</th>
+        <th>Encargado</th>
+        <th>Hora Salida</th>
+        <th>Hora Subida</th>
+        <th>Hora Bajada</th>
+        <th>Comentarios</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody id="cuerpoTabla">
+      <tr><td colspan="10" class="sin-vuelos">Esperando vuelos...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const socket = io('https://fanning-canned-nutcase.ngrok-free.dev/socket.io/socket.io.js', {
+  transports: ['websocket', 'polling'],
+  extraHeaders: { 'ngrok-skip-browser-warning': 'true' }
+});
+
+const cuerpoTabla = document.getElementById('cuerpoTabla');
+const btnLimpiar = document.getElementById('btnLimpiar');
+const estadoConexion = document.getElementById('estadoConexion');
+
+let todosLosVuelos = [];
+
+// Conexión
+socket.on('connect', () => {
+  estadoConexion.textContent = '✅ Conectado';
+  estadoConexion.style.color = '#4CAF50';
+});
+socket.on('disconnect', () => {
+  estadoConexion.textContent = '❌ Desconectado';
+  estadoConexion.style.color = '#f44336';
+});
+
+// ✅ RECIBIR VUELOS ACTUALIZADOS
+socket.on('vuelosActualizados', (datos) => {
+  console.log('📋 Supervisor recibe vuelosActualizados —', datos.vuelos.length, 'vuelos');
+  todosLosVuelos = datos.vuelos;
+  dibujarTabla();
+});
+
+socket.on('listaVuelos', (vuelos) => {
+  console.log('📋 Supervisor recibe listaVuelos —', vuelos.length, 'vuelos');
+  todosLosVuelos = vuelos;
+  dibujarTabla();
+});
+
+socket.on('vueloAsignado', (v) => {
+  console.log('✈️ Supervisor recibe vueloAsignado →', v.nroVuelo||v.vuelo);
+  const idx = todosLosVuelos.findIndex(x => 
+    (x.nroVuelo||x.vuelo) === (v.nroVuelo||v.vuelo) && x.fecha === v.fecha
+  );
+  if (idx >= 0) todosLosVuelos[idx] = { ...todosLosVuelos[idx], ...v };
+  else todosLosVuelos.push(v);
+  dibujarTabla();
+});
+
+socket.on('vueloCerrado', (v) => {
+  console.log('🔴 Supervisor recibe vueloCerrado →', v.nroVuelo||v.vuelo);
+  const idx = todosLosVuelos.findIndex(x => 
+    (x.nroVuelo||x.vuelo) === (v.nroVuelo||v.vuelo) && x.fecha === v.fecha
+  );
+  if (idx >= 0) {
+    todosLosVuelos[idx] = {
+      ...todosLosVuelos[idx],
+      ...v,
+      cerrado: true,
+      horaCierre: v.horaCierre || new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})
+    };
+  }
+  dibujarTabla();
+});
+
+// ✅ LIMPIAR TODO
+btnLimpiar.addEventListener('click', () => {
+  if (!confirm('¿Generar informe y limpiar todas las pantallas?\n\nLos vuelos se guardan en el historial.')) return;
+  todosLosVuelos = [];
+  socket.emit('limpiarDespuesInforme');
+  dibujarTabla();
+});
+
+function dibujarTabla() {
+  if (!todosLosVuelos.length) {
+    cuerpoTabla.innerHTML = '<tr><td colspan="10" class="sin-vuelos">✅ No hay vuelos activos — Sistema listo</td></tr>';
+    return;
+  }
+  
+  cuerpoTabla.innerHTML = '';
+  todosLosVuelos.forEach(v => {
+    const fila = document.createElement('tr');
+    fila.className = v.cerrado ? 'cerrado' : '';
+    
+    const claseEncargado = String(v.encargadoAsignado||'').includes('1') ? 'encargado-1' :
+                           String(v.encargadoAsignado||'').includes('2') ? 'encargado-2' : '';
+    
+    fila.innerHTML = `
+      <td>${v.fecha||'—'}</td>
+      <td>${v.nroVuelo||v.vuelo||'—'}</td>
+      <td>${v.matricula||'—'}</td>
+      <td><strong>${v.posicion||'—'}</strong></td>
+      <td class="${claseEncargado}">${v.encargadoAsignado||'Sin asignar'}</td>
+      <td>${v.horaSalida||v.STA||'—'}</td>
+      <td>${v.horaSubida||'—'}</td>
+      <td>${v.horaBajada||'—'}</td>
+      <td>${v.comentario||'—'}</td>
+      <td>${v.cerrado ? '<span class="etiqueta-cerrado">✅ CERRADO</span>' : '🟡 EN PROCESO'}</td>
+    `;
+    cuerpoTabla.appendChild(fila);
+  });
+}
+
+setTimeout(() => socket.emit('sincronizarAhora'), 500);
+</script>
+</body>
+</html>

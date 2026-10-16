@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventana Supervisora | Appstream AND Doli 2026</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0057B8',
+            secondary: '#0066CC',
+            accent: '#007AFF',
+            white: '#FFFFFF',
+            dark: '#1A202C',
+            medium: '#4A5568',
+            light: '#718096',
+            success: '#109860',
+            warning: '#F59E0B',
+            danger: '#E11D48',
+            blocked: '#9CA3AF',
+            border: '#E2E8F0',
+            cardBg: '#F8FAFC',
+            fondoPantalla: '#F0F4F8',
+          },
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+            display: ['"Inter"', 'sans-serif'],
+            num: ['"Inter"', 'monospace'],
+          },
+          boxShadow: {
+            'app': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+            'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .app-container {
+        @apply min-h-screen bg-fondoPantalla font-sans text-dark;
+      }
+
+      .app-header {
+        @apply bg-primary text-white py-5 px-8 text-center rounded-b-3xl shadow-app mb-6;
+      }
+      .app-title {
+        @apply font-display font-bold text-[28px] tracking-tight uppercase;
+      }
+      .app-subtitle {
+        @apply font-display font-medium text-white/90 text-[15px] mt-1;
+      }
+
+      .estado-principal {
+        @apply max-w-2xl mx-6 xl:mx-auto mt-8 mb-6 text-center font-display font-semibold text-[20px] text-accent;
+      }
+
+      .tarjeta-unica {
+        @apply max-w-md mx-auto px-4 mt-12 mb-8;
+      }
+
+      .chofer-card {
+        @apply bg-white rounded-xl p-8 shadow-card border border-border transition-all duration-200 text-center;
+      }
+      .chofer-card.habilitado {
+        @apply border-2 border-accent bg-blue-50/50 hover:shadow-card-hover;
+      }
+      .chofer-card.finalizado {
+        @apply border border-emerald-200 bg-emerald-50/30 opacity-90;
+      }
+
+      .icono-persona {
+        @apply w-24 h-24 mx-auto mb-6 rounded-full bg-cardBg border border-border flex items-center justify-center text-[50px] text-primary;
+      }
+      .chofer-card.habilitado .icono-persona {
+        @apply bg-accent/10 border-accent/30 text-accent;
+      }
+      .chofer-card.finalizado .icono-persona {
+        @apply bg-emerald-100/50 border-emerald-200 text-emerald-600;
+      }
+
+      .chofer-nombre {
+        @apply text-center text-dark font-semibold text-[24px] mb-2 uppercase;
+      }
+      .chofer-legajo {
+        @apply text-center text-medium text-[16px] font-normal mb-6;
+      }
+
+      .contador-tiempo {
+        @apply text-center font-num font-bold text-[48px] text-accent tracking-tight my-6 block;
+      }
+      .chofer-card.finalizado .contador-tiempo {
+        @apply text-emerald-600;
+      }
+
+      .progreso-linea {
+        @apply w-full h-3 bg-cardBg rounded-full overflow-hidden my-4;
+      }
+      .progreso-relleno {
+        @apply h-full rounded-full transition-all duration-300 bg-gradient-to-r from-primary to-accent;
+      }
+      .chofer-card.finalizado .progreso-relleno {
+        @apply bg-emerald-500;
+      }
+
+      .dato-fila {
+        @apply flex justify-between items-center py-3 border-b border-border/50 last:border-0 text-[15px];
+      }
+      .dato-etiqueta {
+        @apply text-medium font-normal;
+      }
+      .dato-valor {
+        @apply text-dark font-medium text-right;
+      }
+      .dato-valor.advertencia {
+        @apply text-warning font-semibold;
+      }
+      .dato-valor.text-success {
+        @apply text-emerald-600 font-semibold;
+      }
+
+      .boton-reset {
+        @apply max-w-md mx-auto block text-center bg-danger/90 hover:bg-danger text-white font-semibold py-3 px-6 rounded-lg shadow-app transition-all text-[14px] uppercase tracking-wider cursor-pointer w-11/12;
+      }
+
+      .boton-horario {
+        @apply max-w-md mx-auto mt-4 mb-4 block text-center bg-warning/90 hover:bg-warning text-white font-semibold py-3 px-6 rounded-lg shadow-app transition-all text-[14px] uppercase tracking-wider cursor-pointer w-11/12;
+      }
+
+      .boton-finalizar {
+        @apply max-w-md mx-auto mt-4 mb-12 block text-center bg-indigo-600/90 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-app transition-all text-[14px] uppercase tracking-wider cursor-pointer w-11/12;
+      }
+
+      .tablita-cortes {
+        @apply max-w-5xl mx-auto px-4 mb-16;
+      }
+      .titulo-tablita {
+        @apply text-center text-dark font-semibold text-[20px] mb-4 text-indigo-700;
+      }
+      .tabla-container {
+        @apply bg-white rounded-xl shadow-card border border-border overflow-hidden;
+      }
+      .tabla-cortes {
+        @apply w-full text-sm text-left;
+      }
+      .tabla-cortes thead {
+        @apply bg-indigo-50 border-b border-border;
+      }
+      .tabla-cortes th {
+        @apply px-3 py-3 font-semibold text-indigo-800 uppercase;
+      }
+      .tabla-cortes td {
+        @apply px-3 py-3 border-t border-border/50;
+      }
+      .tabla-cortes tr:hover {
+        @apply bg-indigo-50/30;
+      }
+      .sin-datos {
+        @apply text-center text-medium py-6 italic;
+      }
+
+      .app-footer {
+        @apply text-center text-light text-[12px] py-6 border-t border-border mt-8;
+      }
+
+      .modal-horario, .modal-clave, .modal-motivo {
+        @apply fixed inset-0 bg-dark/70 flex items-center justify-center z-50 hidden;
+      }
+      .modal-contenido {
+        @apply bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-card;
+      }
+      .modal-titulo {
+        @apply text-center text-dark font-bold text-[20px] mb-4 text-warning;
+      }
+      .input-horario, .input-clave, .textarea-motivo {
+        @apply w-full p-3 border border-border rounded-lg text-center text-[16px] font-medium my-2;
+      }
+      .textarea-motivo {
+        @apply text-left resize-none;
+      }
+      .boton-guardar {
+        @apply w-full bg-success hover:bg-success/90 text-white font-semibold py-3 px-4 rounded-lg mt-4 transition-all;
+      }
+      .boton-cancelar {
+        @apply w-full bg-medium hover:bg-medium/90 text-white font-semibold py-3 px-4 rounded-lg mt-2 transition-all;
+      }
+    }
+  </style>
+</head>
+<body class="app-container">
+
+  <header class="app-header">
+    <h1 class="app-title">Ventana Supervisora</h1>
+    <h2 class="app-subtitle">• Appstream AND Doli • El Cerebro 2026</h2>
+  </header>
+
+  <div id="estadoPrincipal" class="estado-principal">
+    ESPERANDO DATOS DE VENTANA CHOFERES
+  </div>
+
+  <div class="tarjeta-unica">
+    <div class="chofer-card habilitado">
+      <div class="icono-persona">👤</div>
+      <h3 class="chofer-nombre" id="nombre-chofer">---</h3>
+      <p class="chofer-legajo" id="legajo-chofer">Legajo: ---</p>
+
+      <div class="contador-tiempo" id="contador-principal">--:--</div>
+
+      <div class="progreso-linea">
+        <div class="progreso-relleno" id="progreso-principal" style="width: 0%"></div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-border/60 text-left">
+        <div class="dato-fila">
+          <span class="dato-etiqueta">Hora Asignada</span>
+          <span class="dato-valor" id="hora-asignada">---</span>
+        </div>
+        <div class="dato-fila">
+          <span class="dato-etiqueta">Hora Ingreso Real</span>
+          <span class="dato-valor" id="hora-ingreso">---</span>
+        </div>
+        <div class="dato-fila">
+          <span class="dato-etiqueta">Condición</span>
+          <span class="dato-valor" id="condicion-registro">---</span>
+        </div>
+        <div class="dato-fila">
+          <span class="dato-etiqueta">Tipo de Corte</span>
+          <span class="dato-valor" id="tipo-corte">---</span>
+        </div>
+        <div class="dato-fila">
+          <span class="dato-etiqueta">Motivo / Observación</span>
+          <span class="dato-valor" id="motivo-registro">---</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="btnResetTotal" class="boton-reset">
+    🔄 SOLO SUPERVISOR: REINICIAR SISTEMA
+  </button>
+
+  <button id="btnCambioHorario" class="boton-horario">
+    ⚙️ SOLO SUPERVISOR: CAMBIO DE HORARIO CORTES
+  </button>
+
+  <button id="btnFinalizarCorte" class="boton-finalizar">
+    ✅ SOLO SUPERVISOR: FINALIZAR EL CORTE
+  </button>
+
+  <!-- MODAL CLAVE SUPERVISOR -->
+  <div id="modalClave" class="modal-clave">
+    <div class="modal-contenido">
+      <h3 class="modal-titulo">CONFIRMAR ACCIÓN</h3>
+      <p class="text-center text-medium mb-4">Ingresar clave de supervisor</p>
+      
+      <input type="password" id="claveSupervisor" class="input-clave" placeholder="Ingrese clave">
+
+      <button id="confirmarClave" class="boton-guardar">✅ CONFIRMAR</button>
+      <button id="cancelarClave" class="boton-cancelar">❌ CANCELAR</button>
+    </div>
+  </div>
+
+  <!-- MODAL MOTIVO (PARA FINALIZAR O CAMBIAR HORARIO) -->
+  <div id="modalMotivo" class="modal-motivo">
+    <div class="modal-contenido">
+      <h3 class="modal-titulo" id="tituloMotivo">MOTIVO DE LA ACCIÓN</h3>
+      <p class="text-center text-medium mb-4">Escriba el porqué de esta acción</p>
+      
+      <textarea id="textoMotivo" class="textarea-motivo" rows="3" placeholder="Ej: Cambio de turno, ajuste de horario, problema operativo, etc."></textarea>
+
+      <button id="guardarMotivo" class="boton-guardar">✅ ACEPTAR Y GUARDAR</button>
+      <button id="cancelarMotivo" class="boton-cancelar">❌ CANCELAR</button>
+    </div>
+  </div>
+
+  <!-- MODAL CAMBIO DE HORARIO -->
+  <div id="modalHorario" class="modal-horario">
+    <div class="modal-contenido">
+      <h3 class="modal-titulo">CAMBIO DE HORARIO - SOLO SUPERVISOR</h3>
+      <p class="text-center text-medium mb-4">Ingresar nuevo horario</p>
+      
+      <label class="block text-center text-dark font-medium mb-1">Nuevo Horario (HH:MM)</label>
+      <input type="time" id="nuevoHorario" class="input-horario" placeholder="Ej: 13:30">
+
+      <button id="guardarHorario" class="boton-guardar">✅ CONTINUAR</button>
+      <button id="cancelarHorario" class="boton-cancelar">❌ CANCELAR</button>
+    </div>
+  </div>
+
+  <div class="tablita-cortes">
+    <h3 class="titulo-tablita">Cortes Finalizados</h3>
+    <div class="tabla-container">
+      <table class="tabla-cortes" id="tablaCortes">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Legajo</th>
+            <th>Hora Asignada</th>
+            <th>Hora Ingreso Real</th>
+            <th>Condición</th>
+            <th>Motivo / Observación</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTabla">
+          <tr>
+            <td colspan="6" class="sin-datos">Aún no hay cortes finalizados</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="app-footer max-w-2xl mx-auto px-6">
+    © 2026 Appstream AND Doli - El Cerebro | Ventana Supervisora
+  </footer>
+
+  <script>
+    const socket = io({
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity
+    });
+
+    const CLAVE_SUPERVISOR = "watoven";
+
+    let horaInicioReal = null;
+    let tiempoRestanteGuardado = null;
+    let intervaloTiempo = null;
+    let datosActualesParaTabla = null;
+    let accionPendiente = null;
+
+    window.addEventListener('load', () => {
+      aplicarEstadoInicial();
+      cargarDatosGuardados();
+      cargarCortesGuardados();
+
+      document.getElementById('btnResetTotal').addEventListener('click', () => {
+        if (confirm("⚠️ ATENCIÓN - SOLO SUPERVISOR\n¿REINICIAR TODO EL SISTEMA?\nVolverá a esperar datos de choferes")) {
+          reiniciarSistema();
+          socket.emit('ordenResetTotal');
+        }
+      });
+
+      document.getElementById('btnCambioHorario').addEventListener('click', () => {
+        if (!horaInicioReal) {
+          alert("⚠️ No hay ningún corte activo para modificar");
+          return;
+        }
+        accionPendiente = "cambiarHorario";
+        document.getElementById('claveSupervisor').value = "";
+        document.getElementById('modalClave').style.display = 'flex';
+      });
+
+      document.getElementById('btnFinalizarCorte').addEventListener('click', () => {
+        if (!horaInicioReal) {
+          alert("⚠️ No hay ningún corte activo para finalizar");
+          return;
+        }
+        accionPendiente = "finalizarCorte";
+        document.getElementById('claveSupervisor').value = "";
+        document.getElementById('modalClave').style.display = 'flex';
+      });
+
+      document.getElementById('confirmarClave').addEventListener('click', () => {
+        const claveIngresada = document.getElementById('claveSupervisor').value.trim();
+        if (claveIngresada !== CLAVE_SUPERVISOR) {
+          alert("❌ Clave incorrecta, no tiene permiso para realizar esta acción");
+          document.getElementById('modalClave').style.display = 'none';
+          return;
+        }
+        document.getElementById('modalClave').style.display = 'none';
+
+        if (accionPendiente === "finalizarCorte") {
+          document.getElementById('tituloMotivo').textContent = "MOTIVO DE FINALIZACIÓN";
+          document.getElementById('textoMotivo').value = "";
+          document.getElementById('modalMotivo').style.display = 'flex';
+        } else if (accionPendiente === "cambiarHorario") {
+          document.getElementById('nuevoHorario').value = "";
+          document.getElementById('modalHorario').style.display = 'flex';
+        }
+      });
+
+      document.getElementById('cancelarClave').addEventListener('click', () => {
+        document.getElementById('modalClave').style.display = 'none';
+        accionPendiente = null;
+      });
+
+      document.getElementById('guardarHorario').addEventListener('click', () => {
+        const nuevoHorario = document.getElementById('nuevoHorario').value;
+        if (!nuevoHorario) {
+          alert("⚠️ Ingresar un horario válido (HH:MM)");
+          return;
+        }
+        document.getElementById('modalHorario').style.display = 'none';
+        document.getElementById('tituloMotivo').textContent = "MOTIVO DE CAMBIO DE HORARIO";
+        document.getElementById('textoMotivo').value = "";
+        localStorage.setItem('horarioTemporal', nuevoHorario);
+        document.getElementById('modalMotivo').style.display = 'flex';
+      });
+
+      document.getElementById('cancelarHorario').addEventListener('click', () => {
+        document.getElementById('modalHorario').style.display = 'none';
+        accionPendiente = null;
+        localStorage.removeItem('horarioTemporal');
+      });
+
+      document.getElementById('guardarMotivo').addEventListener('click', () => {
+        const motivo = document.getElementById('textoMotivo').value.trim() || "Sin motivo registrado";
+        document.getElementById('modalMotivo').style.display = 'none';
+
+        if (accionPendiente === "finalizarCorte") {
+          finalizarDescanso(motivo);
+          socket.emit('tiempoCumplido');
+          alert("✅ CORTE FINALIZADO CORRECTAMENTE");
+        } else if (accionPendiente === "cambiarHorario") {
+          const nuevoHorario = localStorage.getItem('horarioTemporal');
+          document.getElementById('hora-asignada').textContent = nuevoHorario + " hs";
+          localStorage.setItem('horarioModificado', nuevoHorario);
+          socket.emit('cambioHorario', { nuevoHorario: nuevoHorario, motivo: motivo });
+          if (datosActualesParaTabla) {
+            const datosCambio = {
+              ...datosActualesParaTabla,
+              horaAsignada: nuevoHorario + " hs",
+              condicion: "HORARIO MODIFICADO",
+              motivo: motivo
+            };
+            agregarCorteATabla(datosCambio);
+            guardarCorteEnHistorial(datosCambio);
+          }
+          alert("✅ HORARIO ACTUALIZADO CORRECTAMENTE");
+          localStorage.removeItem('horarioTemporal');
+        }
+
+        accionPendiente = null;
+      });
+
+      document.getElementById('cancelarMotivo').addEventListener('click', () => {
+        document.getElementById('modalMotivo').style.display = 'none';
+        accionPendiente = null;
+        localStorage.removeItem('horarioTemporal');
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'x') {
+          e.preventDefault();
+          if (confirm("⚠️ ATENCIÓN\n¿Desea borrar TODOS los registros de la tabla?\nEsta acción no se puede deshacer")) {
+            limpiarTablaCompleta();
+            alert("✅ Tabla limpiada correctamente");
+          }
+        }
+      });
+    });
+
+    function aplicarEstadoInicial() {
+      document.querySelector('.chofer-card').className = 'chofer-card habilitado';
+      document.querySelector('.icono-persona').textContent = '👤';
+      document.getElementById('nombre-chofer').textContent = '---';
+      document.getElementById('legajo-chofer').textContent = 'Legajo: ---';
+      document.getElementById('contador-principal').textContent = '--:--';
+      document.getElementById('progreso-principal').style.width = '0%';
+      document.getElementById('hora-asignada').textContent = '---';
+      document.getElementById('hora-ingreso').textContent = '---';
+      document.getElementById('condicion-registro').textContent = '---';
+      document.getElementById('tipo-corte').textContent = '---';
+      document.getElementById('motivo-registro').textContent = '---';
+      document.getElementById('estadoPrincipal').textContent = "ESPERANDO DATOS DE VENTANA CHOFERES";
+      datosActualesParaTabla = null;
+    }
+
+    function cargarDatosGuardados() {
+      const guardado = localStorage.getItem('datosSistema');
+      if (guardado) {
+        const datosGuardados = JSON.parse(guardado);
+        if (datosGuardados.estadoActual === 'enProceso' && datosGuardados.datosActivos) {
+          horaInicioReal = new Date(datosGuardados.datosActivos.horaEjecucion);
+          if (isNaN(horaInicioReal.getTime())) {
+            horaInicioReal = new Date();
+            console.warn("⚠️ Hora inválida recibida, usamos hora actual");
+          }
+          actualizarTarjeta(datosGuardados.datosActivos);
+          iniciarActualizacionTiempo();
+          document.getElementById('estadoPrincipal').textContent = `DATOS RECIBIDOS: ${datosGuardados.datosActivos.nombreCompleto}`;
+          datosActualesParaTabla = datosGuardados.datosActivos;
+        }
+      }
+
+      const horarioGuardado = localStorage.getItem('horarioModificado');
+      if (horarioGuardado) {
+        document.getElementById('hora-asignada').textContent = horarioGuardado + " hs";
+      }
+    }
+
+    function cargarCortesGuardados() {
+      const cortesGuardados = localStorage.getItem('cortesFinalizados');
+      if (cortesGuardados) {
+        const listaCortes = JSON.parse(cortesGuardados);
+        const cuerpoTabla = document.getElementById('cuerpoTabla');
+        cuerpoTabla.innerHTML = "";
+
+        listaCortes.forEach(corte => {
+          const fila = document.createElement('tr');
+          fila.innerHTML = `
+            <td>${corte.nombre}</td>
+            <td>${corte.legajo}</td>
+            <td>${corte.horaAsignada}</td>
+            <td>${corte.horaIngreso}</td>
+            <td>${corte.condicion}</td>
+            <td>${corte.motivo || "---"}</td>
+          `;
+          cuerpoTabla.appendChild(fila);
+        });
+      }
+    }
+
+    function limpiarTablaCompleta() {
+      const cuerpoTabla = document.getElementById('cuerpoTabla');
+      cuerpoTabla.innerHTML = `
+        <tr>
+          <td colspan="6" class="sin-datos">Aún no hay cortes finalizados</td>
+        </tr>
+      `;
+      localStorage.removeItem('cortesFinalizados');
+    }
+
+    socket.on('nuevoDescansoActivo', datosRecibidos => {
+      console.log("📥 DATOS RECIBIDOS COMPLETOS:", datosRecibidos);
+
+      let nombre = "";
+      if (datosRecibidos.nombreCompleto) nombre = datosRecibidos.nombreCompleto;
+      else if (datosRecibidos.nombre) nombre = datosRecibidos.nombre;
+      else if (datosRecibidos.apellidoNombre) nombre = datosRecibidos.apellidoNombre;
+      else if (datosRecibidos.chofer) nombre = datosRecibidos.chofer;
+      else nombre = "Sin nombre registrado";
+
+      nombre = nombre.toString().trim().toUpperCase().replace(/[^\w áéíóúÁÉÍÓÚñÑ-]/g, '');
+
+      const legajo = datosRecibidos.legajo || "---";
+      const horaAsignada = datosRecibidos.horaAsignada || "---";
+      
+      let horaEjecucion = null;
+      if (datosRecibidos.horaEjecucion) {
+        horaEjecucion = new Date(datosRecibidos.horaEjecucion);
+        if (isNaN(horaEjecucion.getTime())) {
+          const regexHora = /(\d{1,2}):(\d{2})/;
+          const coincidencia = datosRecibidos.horaEjecucion.toString().match(regexHora);
+          if (coincidencia) {
+            const ahora = new Date();
+            horaEjecucion = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), parseInt(coincidencia[1]), parseInt(coincidencia[2]));
+          } else {
+            horaEjecucion = new Date();
+            console.warn("⚠️ No se pudo interpretar la hora, usamos hora actual");
+          }
+        }
+      } else {
+        horaEjecucion = new Date();
+      }
+
+      const condicion = datosRecibidos.condicion || "INGRESADO";
+      const tipoCorte = datosRecibidos.tipoCorte || "DESCANSO 60 MIN";
+
+      horaInicioReal = horaEjecucion;
+
+      datosActualesParaTabla = {
+        nombre: nombre,
+        legajo: legajo,
+        horaAsignada: horaAsignada + " hs",
+        horaIngreso: horaEjecucion.toTimeString().slice(0,5) + " hs",
+        condicion: condicion,
+        motivo: "Corte iniciado correctamente"
+      };
+
+      const datosProcesados = {
+        nombreCompleto: nombre,
+        legajo: legajo,
+        horaAsignada: horaAsignada,
+        horaEjecucion: horaEjecucion.toISOString(),
+        horaMostrar: horaEjecucion.toTimeString().slice(0,5) + " hs",
+        condicion: condicion,
+        tipoCorte: tipoCorte,
+        motivo: ""
+      };
+
+      guardarDatosSistema('enProceso', datosProcesados);
+
+      document.getElementById('estadoPrincipal').textContent = `✅ DATOS CARGADOS: ${nombre}`;
+
+      actualizarTarjeta(datosProcesados);
+      iniciarActualizacionTiempo();
+    });
+
+    function iniciarActualizacionTiempo() {
+      if (intervaloTiempo) clearInterval(intervaloTiempo);
+      
+      intervaloTiempo = setInterval(() => {
+        if (!horaInicioReal || isNaN(horaInicioReal.getTime())) {
+          document.getElementById('contador-principal').textContent = "--:--";
+          return;
+        }
+
+        const tiempoTranscurrido = Math.floor((Date.now() - horaInicioReal.getTime()) / 1000);
+        const tiempoRestante = Math.max(0, 3600 - tiempoTranscurrido);
+
+        const minutos = Math.floor(tiempoRestante / 60).toString().padStart(2, '0');
+        const segundos = (tiempoRestante % 60).toString().padStart(2, '0');
+        document.getElementById('contador-principal').textContent = `${minutos}:${segundos}`;
+
+        const porcentaje = Math.max(0, Math.min(100, Math.round((tiempoTranscurrido / 3600) * 100)));
+        document.getElementById('progreso-principal').style.width = `${porcentaje}%`;
+
+        if (tiempoRestante <= 0) {
+          clearInterval(intervaloTiempo);
+          horaInicioReal = null;
+          finalizarDescanso("Finalizó automáticamente por tiempo cumplido");
+          socket.emit('tiempoCumplido');
+        }
+      }, 1000);
+
+      setInterval(() => {
+        if (horaInicioReal) {
+          guardarDatosSistema('enProceso', {
+            ...JSON.parse(localStorage.getItem('datosSistema')).datosActivos,
+            horaEjecucion: horaInicioReal.toISOString()
+          });
+        }
+      }, 5000);
+    }
+
+    function finalizarDescanso(motivoFinal) {
+      const tarjeta = document.querySelector('.chofer-card');
+      tarjeta.className = 'chofer-card finalizado';
+      tarjeta.querySelector('.icono-persona').textContent = '✅';
+      document.getElementById('contador-principal').textContent = "00:00";
+      document.getElementById('progreso-principal').style.width = '100%';
+      document.getElementById('condicion-registro').textContent = "FINALIZADO";
+      document.getElementById('condicion-registro').className = 'dato-valor text-success';
+      document.getElementById('motivo-registro').textContent = motivoFinal;
+      document.getElementById('estadoPrincipal').textContent = "✅ DESCANSO FINALIZADO";
+
+      guardarDatosSistema('finalizado', null);
+
+      if (datosActualesParaTabla) {
+        const datosFinal = {
+          ...datosActualesParaTabla,
+          condicion: "FINALIZADO",
+          motivo: motivoFinal,
+          fechaFinalizacion: new Date().toLocaleString('es-AR')
+        };
+
+        // ✅ ENVÍO AL SERVIDOR PARA GUARDAR EN GOOGLE DRIVE
+        socket.emit('descansoTerminadoOk', datosFinal);
+
+        agregarCorteATabla(datosFinal);
+        guardarCorteEnHistorial(datosFinal);
+      }
+
+      setTimeout(() => {
+        reiniciarSistema();
+        socket.emit('ordenResetTotal');
+      }, 3000);
+    }
+
+    function agregarCorteATabla(datos) {
+      const cuerpoTabla = document.getElementById('cuerpoTabla');
+      const filaVacia = cuerpoTabla.querySelector('.sin-datos');
+      if (filaVacia) {
+        cuerpoTabla.innerHTML = "";
+      }
+
+      const fila = document.createElement('tr');
+      fila.innerHTML = `
+        <td>${datos.nombre}</td>
+        <td>${datos.legajo}</td>
+        <td>${datos.horaAsignada}</td>
+        <td>${datos.horaIngreso}</td>
+        <td>${datos.condicion}</td>
+        <td>${datos.motivo || "---"}</td>
+      `;
+      cuerpoTabla.appendChild(fila);
+    }
+
+    function guardarCorteEnHistorial(datos) {
+      let cortes = [];
+      const guardado = localStorage.getItem('cortesFinalizados');
+      if (guardado) {
+        cortes = JSON.parse(guardado);
+      }
+      cortes.push(datos);
+      localStorage.setItem('cortesFinalizados', JSON.stringify(cortes));
+    }
+
+    function reiniciarSistema() {
+      if (intervaloTiempo) clearInterval(intervaloTiempo);
+      horaInicioReal = null;
+      datosActualesParaTabla = null;
+      localStorage.removeItem('datosSistema');
+      localStorage.removeItem('horarioModificado');
+      localStorage.removeItem('horarioTemporal');
+      aplicarEstadoInicial();
+    }
+
+    socket.on('reiniciarVista', reiniciarSistema);
+
+    function actualizarTarjeta(datos) {
+      document.getElementById('nombre-chofer').textContent = datos.nombreCompleto;
+      document.getElementById('legajo-chofer').textContent = `Legajo: ${datos.legajo}`;
+      document.getElementById('hora-asignada').textContent = datos.horaAsignada + " hs";
+      document.getElementById('hora-ingreso').textContent = datos.horaMostrar;
+      document.getElementById('condicion-registro').textContent = datos.condicion;
+      document.getElementById('tipo-corte').textContent = datos.tipoCorte;
+      document.getElementById('motivo-registro').textContent = datos.motivo || "---";
+
+      if (datos.condicion.includes('FUERA') || datos.condicion.includes('TARDE')) {
+        document.getElementById('condicion-registro').className = 'dato-valor advertencia';
+        document.getElementById('condicion-registro').textContent += ' ⚠️';
+      } else if (datos.condicion.includes('TIEMPO') || datos.condicion.includes('INGRESADO')) {
+        document.getElementById('condicion-registro').className = 'dato-valor text-success';
+      } else {
+        document.getElementById('condicion-registro').className = 'dato-valor text-medium';
+      }
+    }
+
+    function guardarDatosSistema(estado, datosActivos) {
+      localStorage.setItem('datosSistema', JSON.stringify({
+        estadoActual: estado,
+        datosActivos: datosActivos
+      }));
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!horaInicioReal) return;
+      if (document.visibilityState === 'visible') {
+        iniciarActualizacionTiempo();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (horaInicioReal) iniciarActualizacionTiempo();
+    });
+  </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="ngrok-skip-browser-warning" content="true">
+<title>ENCARGADO 1 — MIS VUELOS ASIGNADOS</title>
+<script src="config.js"></script>
+<script>
+let SERVIDOR = '';
+function actualizarDireccion() {
+  if (typeof DIRECCION_BASE !== 'undefined') {
+    SERVIDOR = DIRECCION_BASE;
+  }
+}
+actualizarDireccion();
+setInterval(actualizarDireccion, 3000);
+</script>
+<script>
+document.write('<script src="' + (typeof DIRECCION_BASE !== 'undefined' ? DIRECCION_BASE : '') + '/socket.io/socket.io.js"><\/script>');
+</script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { 
+  min-height:100%; 
+  font-family:'Segoe UI',Arial,sans-serif; 
+  background:#FFFFFF; 
+  color:#000000; 
+  font-size:15px; 
+}
+.contenedor-todo { 
+  width:100%; 
+  max-width:1000px; 
+  margin:0 auto; 
+  padding:12px 6px; 
+  padding-bottom:35px; 
+}
+.cabecera { 
+  font-size:24px; 
+  font-weight:bold; 
+  border-bottom:1px solid #666; 
+  padding-bottom:10px; 
+  margin-bottom:12px; 
+  text-align:center; 
+}
+.estado-conexion { 
+  padding:8px 12px; 
+  margin-bottom:10px; 
+  background:#EEF7FF; 
+  border-radius:4px; 
+  color:#004488; 
+  text-align:center; 
+  font-size:16px; 
+}
+.panel-radio {
+  background:#E8F5E9;
+  border:1px solid #2E7D32;
+  border-radius:6px;
+  padding:12px;
+  margin-bottom:15px;
+}
+.radio-titulo {
+  color:#1B5E20;
+  font-weight:bold;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.luz-radio {
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#ccc;
+}
+.luz-activa {
+  background:#00B42A;
+  box-shadow:0 0 8px #00B42A;
+}
+.caja-mensajes {
+  background:#FAFBFC;
+  border:1px solid #E5E6EB;
+  padding:10px;
+  height:120px;
+  overflow-y:auto;
+  border-radius:4px;
+  margin-top:8px;
+}
+.mensaje-entrada {
+  padding:6px 0;
+  border-bottom:1px solid #F2F3F5;
+  font-size:14px;
+}
+.mensaje-entrada:last-child { border-bottom:none; }
+.aviso-alerta { 
+  padding:10px 12px; 
+  margin-bottom:12px; 
+  background:#FFEBEE; 
+  border:1px solid #D32F2F; 
+  border-radius:4px; 
+  color:#D32F2F; 
+  font-weight:bold; 
+  text-align:center; 
+  font-size:16px; 
+  display:none; 
+}
+.aviso-liberar { 
+  padding:10px 12px; 
+  margin-bottom:15px; 
+  background:#E8F5E9; 
+  border:1px solid #2E7D32; 
+  border-radius:4px; 
+  color:#1B5E20; 
+  font-weight:bold; 
+  text-align:center; 
+  font-size:15px; 
+}
+table { 
+  width:100%; 
+  border-collapse:separate; 
+  border-spacing:2px; 
+  margin-bottom:15px; 
+  table-layout:fixed; 
+}
+th { 
+  border:none; 
+  border-bottom:1px solid #666; 
+  padding:10px 4px; 
+  text-align:center; 
+  font-weight:normal; 
+  font-size:14px; 
+}
+th:nth-child(1) { width:14%; }
+th:nth-child(2) { width:18%; }
+th:nth-child(3) { width:18%; }
+th:nth-child(4) { width:18%; }
+th:nth-child(5) { width:22%; }
+th:nth-child(6) { width:10%; }
+td { 
+  border:none; 
+  border-bottom:1px solid #DDD; 
+  padding:10px 4px; 
+  text-align:center; 
+  font-size:14px; 
+  word-break:break-word; 
+}
+.matricula-vuelo { 
+  font-size:12px; 
+  color:#444; 
+  margin-top:3px; 
+  display:block; 
+}
+.hora-liberar-tabla { color:#2E7D32; font-weight:bold; font-size:13px; }
+.fila-pendiente { cursor:pointer; }
+.fila-pendiente:hover { background:#F8F9FA; }
+.fila-cerrada { 
+  color:#444; 
+  background:#FAFAFA; 
+  cursor:not-allowed; 
+  opacity:0.85; 
+}
+.estado-cerrado { color:#006633; font-weight:bold; }
+.estado-pendiente { color:#CC6600; font-weight:bold; }
+.botones { 
+  margin-top:10px; 
+  display:flex; 
+  gap:8px; 
+  flex-wrap:wrap; 
+  justify-content:center; 
+}
+button { 
+  padding:8px 14px; 
+  font-size:15px; 
+  border:1px solid #888; 
+  border-radius:4px; 
+  cursor:pointer; 
+}
+.btn-guardar { 
+  background:#E8F5E9; 
+  border-color:#2E7D32; 
+  color:#1B5E20; 
+}
+.btn-cancelar { 
+  background:#FFF3E0; 
+  border-color:#E65100; 
+  color:#E65100; 
+}
+.btn-foto { 
+  background:#00B42A; 
+  color:white; 
+  border:none; 
+  padding:8px 14px; 
+  border-radius:4px; 
+  cursor:pointer; 
+  margin-top:10px; 
+  font-size:14px; 
+}
+.btn-foto:hover { background:#009933; }
+.preview-foto { 
+  margin-top:10px; 
+  max-width:150px; 
+  border-radius:6px; 
+  display:none; 
+}
+.subiendo-foto { 
+  color:#FF7A30; 
+  font-size:13px; 
+  margin-top:6px; 
+  display:none; 
+}
+.modal { 
+  position:fixed; 
+  top:0; 
+  left:0; 
+  width:100%; 
+  height:100%; 
+  background:rgba(0,0,0,0.25); 
+  display:none; 
+  align-items:center; 
+  justify-content:center; 
+  padding:15px; 
+}
+.modal-contenido { 
+  background:white; 
+  border:1px solid #999; 
+  border-radius:6px; 
+  padding:20px; 
+  width:100%; 
+  max-width:480px; 
+  max-height:90vh;
+  overflow-y:auto;
+}
+.modal-contenido h4 { 
+  margin-bottom:15px; 
+  font-size:17px; 
+  text-align:center; 
+}
+.datos-vuelo-modal { 
+  padding:12px; 
+  margin-bottom:12px; 
+  background:#F5F5F5; 
+  border-radius:4px; 
+  text-align:center; 
+  font-size:15px; 
+  line-height:1.8; 
+}
+.campo { margin-bottom:12px; }
+label { 
+  display:block; 
+  margin-bottom:4px; 
+  font-weight:500; 
+}
+input, textarea { 
+  width:100%; 
+  padding:8px; 
+  border:1px solid #999; 
+  border-radius:4px; 
+  font-size:15px; 
+}
+textarea { min-height:80px; resize:vertical; }
+.pie-pagina { 
+  position:fixed; 
+  bottom:0; 
+  left:0; 
+  width:100%; 
+  text-align:center; 
+  padding:6px; 
+  font-size:12px; 
+  color:#666; 
+  background:#FFF; 
+  border-top:1px solid #EEE; 
+}
+</style>
+</head>
+<body>
+<div class="contenedor-todo">
+  <div class="cabecera">✈️ ENCARGADO 1 — MIS VUELOS ASIGNADOS</div>
+  
+  <div class="estado-conexion" id="estado">✅ Conectado — esperando mensajes...</div>
+  
+  <div class="panel-radio">
+    <div class="radio-titulo">
+      <span id="luzRadio" class="luz-radio"></span>
+      RADIO — MENSAJES RECIBIDOS
+    </div>
+    <div id="cajaMensajesRadio" class="caja-mensajes">
+      <div style="color:#888;">Esperando mensajes de ANAROBER...</div>
+    </div>
+  </div>
+  <div class="aviso-alerta" id="alertaGeneral">⚠️ TENÉS VUELOS PENDIENTES — TOCÁ LA FILA PARA COMPLETAR</div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>N°<br>VUELO</th>
+        <th>HORA<br>SALIDA</th>
+        <th>DEBE<br>LIBERAR</th>
+        <th>HORA<br>SUBIDA</th>
+        <th>HORA<br>BAJADA</th>
+        <th>ESTADO</th>
+      </tr>
+    </thead>
+    <tbody id="cuerpoTabla"></tbody>
+  </table>
+</div>
+<div class="pie-pagina">AEROPARQUE 2026 — Encargado 1</div>
+<div class="modal" id="formularioCarga">
+  <div class="modal-contenido">
+    <h4>Completar datos del vuelo</h4>
+    <div class="datos-vuelo-modal" id="datosVueloModal"></div>
+    <div class="aviso-liberar" id="avisoLiberar"></div>
+    
+    <div class="campo">
+      <label>Hora de Subida</label>
+      <input type="time" id="horaSubida">
+    </div>
+    <div class="campo">
+      <label>Hora de Bajada</label>
+      <input type="time" id="horaBajada">
+    </div>
+    <div class="campo">
+      <label>Comentario / Observaciones</label>
+      <textarea id="comentario" placeholder="Escribí cualquier novedad..."></textarea>
+    </div>
+    
+    <div class="campo">
+      <label>📷 Foto del vuelo</label>
+      <input type="file" id="fotoVuelo" accept="image/*" style="display:none" onchange="procesarFoto()">
+      <button class="btn-foto" type="button" onclick="document.getElementById('fotoVuelo').click()">📷 Seleccionar y Subir Foto</button>
+      <div class="subiendo-foto" id="subiendoFoto">Subiendo foto...</div>
+      <img class="preview-foto" id="vistaFoto" alt="Vista previa">
+    </div>
+    
+    <div class="botones">
+      <button class="btn-guardar" onclick="guardarYCerrar()">✅ GUARDAR Y CERRAR VUELO</button>
+      <button class="btn-cancelar" onclick="cerrarModal()">❌ CANCELAR</button>
+    </div>
+  </div>
+</div>
+<script>
+const MI_CODIGO = '01';
+const MI_NUMERO = '1';
+const RUTA_JSON = (SERVIDOR || '') + '/mensaje_actual.json';
+let ultimoIdLeido = null;
+let mensajesProcesados = new Set();
+let misVuelos = [];
+let vueloActivo = null;
+let intervaloAlerta = null;
+let habiaPendientes = false;
+
+// 💚 PROTECCIÓN: guardamos los NROS de vuelos limpiados para NO mostrarlos NUNCA más
+const vuelosLimpiados = new Set();
+let momentoLimpieza = 0;
+
+// ===== LEER ARCHIVO JSON =====
+async function leerJSON() {
+  try {
+    const res = await fetch(RUTA_JSON + '?t=' + Date.now());
+    if (!res.ok) return;
+    
+    const msg = await res.json();
+    const destino = (msg.destino || '').trim().toUpperCase();
+    const paraMi = destino === 'TODOS' || destino === 'ENCARGADO 1' || destino === 'ENCARGADO01';
+    
+    if (!paraMi) return;
+    if (mensajesProcesados.has(msg.id)) return;
+    
+    mensajesProcesados.add(msg.id);
+    ultimoIdLeido = msg.id;
+    
+    mostrarMensaje(msg);
+    hablar(msg.texto);
+    
+  } catch(e) {
+    // sin mensaje nuevo
+  }
+}
+function mostrarMensaje(msg) {
+  const caja = document.getElementById('cajaMensajesRadio');
+  const hora = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className = 'mensaje-entrada';
+  div.innerHTML = `<strong>[${hora}] ${msg.remitente}:</strong> ${msg.texto}`;
+  caja.appendChild(div);
+  caja.scrollTop = caja.scrollHeight;
+  if (caja.children.length > 15) caja.children[0].remove();
+}
+function hablar(texto) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  
+  setTimeout(() => {
+    const v = new SpeechSynthesisUtterance(texto);
+    v.lang = 'es-AR';
+    v.volume = 1;
+    v.rate = 0.9;
+    v.onstart = () => document.getElementById('luzRadio').classList.add('luz-activa');
+    v.onend = () => document.getElementById('luzRadio').classList.remove('luz-activa');
+    speechSynthesis.speak(v);
+  }, 200);
+}
+function calcularLiberar(horaSalida) {
+  if (!horaSalida || horaSalida === '—' || !horaSalida.includes(':')) return '—';
+  const [h, m] = horaSalida.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return '—';
+  const f = new Date();
+  f.setHours(h, m - 30, 0, 0);
+  return `${String(f.getHours()).padStart(2,'0')}:${String(f.getMinutes()).padStart(2,'0')}`;
+}
+function reproducirAlerta() {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const m = new SpeechSynthesisUtterance('Se asignó un nuevo vuelo al Encargado 1');
+  m.lang = 'es-AR'; m.volume = 1; m.rate = 1;
+  speechSynthesis.speak(m);
+}
+function controlarAlerta() {
+  const hay = misVuelos.some(v => !v.cerrado);
+  const alerta = document.getElementById('alertaGeneral');
+  if (hay) {
+    alerta.style.display = 'block';
+    if (!habiaPendientes) reproducirAlerta();
+    if (!intervaloAlerta) intervaloAlerta = setInterval(() => {
+      if (misVuelos.some(v => !v.cerrado)) reproducirAlerta();
+      else { clearInterval(intervaloAlerta); intervaloAlerta = null; }
+    }, 10000);
+    habiaPendientes = true;
+  } else {
+    alerta.style.display = 'none';
+    habiaPendientes = false;
+  }
+}
+async function procesarFoto() {
+  const input = document.getElementById('fotoVuelo');
+  const arch = input.files[0];
+  if (!arch || !vueloActivo) return;
+  
+  const vista = document.getElementById('vistaFoto');
+  const subiendo = document.getElementById('subiendoFoto');
+  subiendo.style.display = 'block';
+  vista.style.display = 'none';
+  
+  const img = new Image();
+  img.src = URL.createObjectURL(arch);
+  await new Promise(r => img.onload = r);
+  
+  const lienzo = document.createElement('canvas');
+  lienzo.width = 1024;
+  lienzo.height = lienzo.width * img.height / img.width;
+  const ctx = lienzo.getContext('2d');
+  ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+  
+  const b64 = lienzo.toDataURL('image/jpeg', 0.8);
+  const bin = atob(b64.split(',')[1]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  
+  const nro = vueloActivo.nroVuelo || vueloActivo.vuelo;
+  await fetch(`${SERVIDOR || ''}/subir-foto?vuelo=${encodeURIComponent(nro)}`, {
+    method: 'POST', body: bytes
+  });
+  
+  subiendo.style.display = 'none';
+  vista.src = URL.createObjectURL(arch);
+  vista.style.display = 'block';
+  alert('✅ Foto subida');
+}
+function esperarSocket() {
+  if (typeof io === 'undefined') {
+    setTimeout(esperarSocket, 150);
+    return;
+  }
+  
+  const socket = io(SERVIDOR, { transports: ['websocket', 'polling'] });
+  
+  socket.on('connect', () => {
+    document.getElementById('estado').innerHTML = '✅ Conectado — leyendo mensajes...';
+    setInterval(leerJSON, 2000);
+    pedirVuelos();
+  });
+  
+  socket.on('disconnect', () => {
+    document.getElementById('estado').innerHTML = '❌ Desconectado';
+  });
+
+  // ✅ RECIBE LISTA — FILTRA VUELOS LIMPIADOS
+  socket.on('listaVuelos', (todos) => {
+    if (!todos || todos.length === 0) {
+      misVuelos = [];
+      actualizarTabla();
+      controlarAlerta();
+      return;
+    }
+    // 💚 FILTRO DOBLE: fecha Y lista de excluidos
+    misVuelos = todos.filter(v => {
+      const asig = String(v.encargadoAsignado || v.encargado || '').trim();
+      const nroVuelo = v.nroVuelo || v.vuelo;
+      // Si fue limpiado, NO lo mostramos NUNCA más
+      if (vuelosLimpiados.has(nroVuelo)) return false;
+      // Filtramos por fecha también como segunda protección
+      const fechaAsignacion = v.fechaAsignacion ? new Date(v.fechaAsignacion).getTime() : 0;
+      const despuesLimpieza = fechaAsignacion >= momentoLimpieza || momentoLimpieza === 0;
+      return (asig === MI_CODIGO || asig === MI_NUMERO) && v.esArribo !== true && despuesLimpieza;
+    });
+    actualizarTabla();
+    controlarAlerta();
+  });
+  
+  socket.on('vuelosActualizados', (datos) => {
+    if (!datos.vuelos || datos.vuelos.length === 0) {
+      misVuelos = [];
+      actualizarTabla();
+      controlarAlerta();
+      return;
+    }
+    misVuelos = datos.vuelos.filter(v => {
+      const asig = String(v.encargadoAsignado || v.encargado || '').trim();
+      const nroVuelo = v.nroVuelo || v.vuelo;
+      if (vuelosLimpiados.has(nroVuelo)) return false;
+      const fechaAsignacion = v.fechaAsignacion ? new Date(v.fechaAsignacion).getTime() : 0;
+      const despuesLimpieza = fechaAsignacion >= momentoLimpieza || momentoLimpieza === 0;
+      return (asig === MI_CODIGO || asig === MI_NUMERO) && v.esArribo !== true && despuesLimpieza;
+    });
+    actualizarTabla();
+    controlarAlerta();
+  });
+  
+  // ✅ SEÑAL DE LIMPIEZA: guardamos EXACTAMENTE qué vuelos se van
+  socket.on('limpiezaTotalRealizada', (listaVuelos) => {
+    momentoLimpieza = Date.now();
+    // 💚 Si el servidor nos envía la lista de los que se limpiaron, los guardamos
+    if (listaVuelos && Array.isArray(listaVuelos)) {
+      listaVuelos.forEach(v => {
+        const nro = v.nroVuelo || v.vuelo;
+        if (nro) vuelosLimpiados.add(nro);
+      });
+    }
+    misVuelos = [];
+    actualizarTabla();
+    controlarAlerta();
+    console.log('🧹 Limpieza registrada — vuelos guardados en lista de excluidos');
+  });
+  
+  socket.on('vueloAsignado', (vuelo) => {
+    const asig = String(vuelo.encargadoAsignado || vuelo.encargado || '').trim();
+    if ((asig === MI_CODIGO || asig === MI_NUMERO) && vuelo.esArribo !== true) {
+      pedirVuelos();
+    }
+  });
+  
+  socket.on('vueloCerrado', pedirVuelos);
+  
+  socket.on('vuelos-nuevos-asignados', (datos) => {
+    if (String(datos.encargado) === MI_CODIGO || String(datos.encargado) === MI_NUMERO) {
+      misVuelos = (datos.vuelos || []).filter(v => {
+        const nro = v.nroVuelo || v.vuelo;
+        return !vuelosLimpiados.has(nro) && v.esArribo !== true;
+      });
+      actualizarTabla();
+      controlarAlerta();
+    }
+  });
+  
+  function pedirVuelos() {
+    socket.emit('pedirTodosMisVuelos', MI_CODIGO);
+  }
+  
+  function actualizarTabla() {
+    const cuerpo = document.getElementById('cuerpoTabla');
+    if (misVuelos.length === 0) {
+      cuerpo.innerHTML = '<tr><td colspan="6" style="padding:25px; color:#666;">📭 No tenés vuelos asignados</td></tr>';
+      return;
+    }
+    cuerpo.innerHTML = misVuelos.map(v => {
+      const cerrado = !!v.cerrado;
+      const hs = v.horaSalida || v.STA || '—';
+      const liberar = calcularLiberar(hs);
+      const hSub = v.horaSubida || '—';
+      const hBaj = v.horaBajada || '—';
+      const estadoTxt = cerrado ? '✅ CERRADO' : '⏳ PENDIENTE';
+      const estadoCls = cerrado ? 'estado-cerrado' : 'estado-pendiente';
+      const filaCls = cerrado ? 'fila-cerrada' : 'fila-pendiente';
+      return `<tr class="${filaCls}" ${!cerrado ? `onclick="abrir('${(v.nroVuelo||v.vuelo).replace(/'/g,"\\'")}')"` : ''}>
+        <td><strong>${v.nroVuelo||v.vuelo}</strong><span class="matricula-vuelo">${v.matricula||'—'}</span></td>
+        <td><strong>${hs}</strong></td>
+        <td class="hora-liberar-tabla">${liberar}</td>
+        <td>${hSub}</td>
+        <td>${hBaj}</td>
+        <td class="${estadoCls}">${estadoTxt}</td>
+      </tr>`;
+    }).join('');
+  }
+  
+  window.abrir = function(nro) {
+    vueloActivo = misVuelos.find(v => (v.nroVuelo||v.vuelo) === nro);
+    if (!vueloActivo) return;
+    const hs = vueloActivo.horaSalida || vueloActivo.STA || '—';
+    document.getElementById('datosVueloModal').innerHTML = `
+      <strong>Vuelo:</strong> ${vueloActivo.nroVuelo||vueloActivo.vuelo} — ${vueloActivo.matricula||'—'}<br>
+      <strong>Posición:</strong> ${vueloActivo.posicion||'—'}<br>
+      <strong>Hora Salida:</strong> ${hs}
+    `;
+    document.getElementById('avisoLiberar').innerHTML = `⏰ SALIDA: ${hs}<br>✅ DEBE LIBERAR A LAS: ${calcularLiberar(hs)} (30 min antes)`;
+    document.getElementById('horaSubida').value = '';
+    document.getElementById('horaBajada').value = '';
+    document.getElementById('comentario').value = '';
+    document.getElementById('fotoVuelo').value = '';
+    document.getElementById('vistaFoto').style.display = 'none';
+    document.getElementById('formularioCarga').style.display = 'flex';
+  };
+  
+  window.cerrarModal = function() {
+    document.getElementById('formularioCarga').style.display = 'none';
+    vueloActivo = null;
+  };
+  
+  window.guardarYCerrar = function() {
+    if (!vueloActivo) return;
+    const hs = vueloActivo.horaSalida || vueloActivo.STA || '—';
+    const hSub = document.getElementById('horaSubida').value;
+    const hBaj = document.getElementById('horaBajada').value;
+    const obs = document.getElementById('comentario').value.trim();
+    
+    socket.emit('cerrarVuelo', {
+      nroVuelo: vueloActivo.nroVuelo||vueloActivo.vuelo,
+      vuelo: vueloActivo.vuelo,
+      fecha: vueloActivo.fecha,
+      matricula: vueloActivo.matricula,
+      posicion: vueloActivo.posicion,
+      horaSalida: hs,
+      horaSubida: hSub,
+      horaBajada: hBaj,
+      comentario: obs,
+      encargadoAsignado: MI_CODIGO,
+      cerrado: true
+    });
+    
+    cerrarModal();
+  };
+  
+  setInterval(pedirVuelos, 3000);
+}
+esperarSocket();
+</script>
+</body>
+</html>
