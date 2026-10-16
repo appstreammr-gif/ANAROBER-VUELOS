@@ -2,9 +2,9 @@
   "name": "anarober-vuelos",
   "version": "1.0.0",
   "description": "Sistema ANAROBER",
-  "main": "server.js",
+  "main": "INICIAR_TODO.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node INICIAR_TODO.js"
   },
   "dependencies": {
     "express": "^4.18.2"
